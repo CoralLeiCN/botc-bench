@@ -1,6 +1,6 @@
 # 《血染钟楼》官方游戏规则摘要
 
-> 本部分依据官方 Wiki 与规则书整理。角色能力可能覆盖通用规则，具体对局仍应以所用剧本和角色日志（Almanac）为准。
+> 本部分依据官方 Wiki 与规则书整理。角色能力可能覆盖通用规则，具体对局仍应以所用剧本和角色历书（Almanac）为准。
 >
 > Agent 的测试协议与控制规则见 [benchmark_rules.md](benchmark_rules.md)，不属于官方游戏规则。
 
@@ -78,14 +78,15 @@
 ## 7. 官方规则优先级
 
 1. 角色能力文本优先于基础规则。
-2. 角色日志（Almanac）中的详细说明优先用于处理特殊互动。
+2. 角色历书（Almanac）中的详细说明优先用于处理特殊互动。
 3. 说书人负责最终裁定，但不能任意违背规则；允许误导玩家不等于可以错误解释规则。
 
 ## 官方规则参考资料
 
 - [Blood on the Clocktower Wiki：Rules Explanation](https://wiki.bloodontheclocktower.com/Rules_Explanation)
+- [Blood on the Clocktower Wiki：Setup](https://wiki.bloodontheclocktower.com/Setup)
+- [Blood on the Clocktower Wiki：Abilities](https://wiki.bloodontheclocktower.com/Abilities)
 - [Blood on the Clocktower Wiki：Glossary](https://wiki.bloodontheclocktower.com/Glossary)
 - [Blood on the Clocktower Wiki：States](https://wiki.bloodontheclocktower.com/States)
-- [Blood on the Clocktower 官方规则书（PDF 镜像）](https://board-game-rules.com/wp-content/uploads/2025/01/blood-on-the-clocktower_Official-Rules.pdf)
 
 > 本摘要不覆盖旅行者、传奇角色（Fabled）、疯狂（Madness）、角色相克规则（Jinx）或所有特殊胜负条件。具体对局还应参考所用剧本与相关角色的官方说明。

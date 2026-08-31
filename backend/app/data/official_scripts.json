@@ -1,0 +1,1826 @@
+{
+  "schema_version": 1,
+  "retrieved_at": "2026-08-31",
+  "sources": {
+    "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
+    "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
+    "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+  },
+  "source_sha256": {
+    "english_roles": "6c659354dee75cf3afdeaf6cbc750b274a87d1099cc5f68651a2114881eb85ca",
+    "english_locale": "1ed046aec68c340e52bb8530b1ed5ea0b210af571ad0c18def1aed645588614a",
+    "zh_hans": "09a2a4ab383703d927f48409422d310db586825c37dffab428835efd23882ef6"
+  },
+  "scripts": [
+    {
+      "id": "script-002",
+      "edition": "tb",
+      "official": true,
+      "difficulty": "beginner",
+      "name": {
+        "en": "Trouble Brewing",
+        "zh_hans": "暗流涌动"
+      },
+      "description": {
+        "en": "...has a little bit of everything. Some characters passively receive information, some need to take action to learn who is who, while some simply want to bait the Demon into attacking them. Both good and evil can gain the upper hand by making well-timed sacrifices.\nTrouble Brewing is a relatively straightforward Demon hunt, but evil has a number of dastardly misinformation tricks up their sleeves, so the good players had better question what they think they know if they hope to survive.",
+        "zh_hans": "...会对每种要素都略有涉及。一些角色会被动地获取信息，一些角色则需要通过行动来得知谁是谁，而一些角色则单纯只是想诱使恶魔攻击他们。善良与邪恶双方都可以适时做出牺牲以占据上风。\n《暗流涌动》是一场对恶魔长驱直入的狩猎，然而邪恶方也有一连串混淆信息的卑鄙把戏。所以如果善良玩家想要求得生存，最好先质疑自己原本的认知。"
+      },
+      "roles": [
+        {
+          "id": "chef",
+          "team": "townsfolk",
+          "name": {
+            "en": "Chef",
+            "zh_hans": "厨师"
+          },
+          "ability": {
+            "en": "You start knowing how many pairs of evil players there are.",
+            "zh_hans": "在你的首个夜晚，你会得知场上邻座的邪恶玩家有多少对。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "investigator",
+          "team": "townsfolk",
+          "name": {
+            "en": "Investigator",
+            "zh_hans": "调查员"
+          },
+          "ability": {
+            "en": "You start knowing that 1 of 2 players is a particular Minion.",
+            "zh_hans": "在你的首个夜晚，你会得知两名玩家和一个爪牙角色：这两名玩家之一是该角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Minion",
+            "Wrong"
+          ]
+        },
+        {
+          "id": "washerwoman",
+          "team": "townsfolk",
+          "name": {
+            "en": "Washerwoman",
+            "zh_hans": "洗衣妇"
+          },
+          "ability": {
+            "en": "You start knowing that 1 of 2 players is a particular Townsfolk.",
+            "zh_hans": "在你的首个夜晚，你会得知两名玩家和一个镇民角色：这两名玩家之一是该角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Townsfolk",
+            "Wrong"
+          ]
+        },
+        {
+          "id": "librarian",
+          "team": "townsfolk",
+          "name": {
+            "en": "Librarian",
+            "zh_hans": "图书管理员"
+          },
+          "ability": {
+            "en": "You start knowing that 1 of 2 players is a particular Outsider. (Or that zero are in play.)",
+            "zh_hans": "在你的首个夜晚，你会得知两名玩家和一个外来者角色：这两名玩家之一是该角色（或者你会得知没有外来者在场。）"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Outsider",
+            "Wrong"
+          ]
+        },
+        {
+          "id": "empath",
+          "team": "townsfolk",
+          "name": {
+            "en": "Empath",
+            "zh_hans": "共情者"
+          },
+          "ability": {
+            "en": "Each night, you learn how many of your 2 alive neighbors are evil.",
+            "zh_hans": "每个夜晚，你会得知与你邻近的两名存活的玩家中邪恶玩家的数量。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "fortuneteller",
+          "team": "townsfolk",
+          "name": {
+            "en": "Fortune Teller",
+            "zh_hans": "占卜师"
+          },
+          "ability": {
+            "en": "Each night, choose 2 players: you learn if either is a Demon. There is a good player that registers as a Demon to you.",
+            "zh_hans": "每个夜晚，你要选择两名玩家：你会得知他们之中是否有恶魔。会有一名善良玩家始终被你的能力当作恶魔。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Red Herring"
+          ]
+        },
+        {
+          "id": "undertaker",
+          "team": "townsfolk",
+          "name": {
+            "en": "Undertaker",
+            "zh_hans": "送葬者"
+          },
+          "ability": {
+            "en": "Each night*, you learn which character died by execution today.",
+            "zh_hans": "每个夜晚*，你会得知今天白天死于处决的玩家的角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Died Today"
+          ]
+        },
+        {
+          "id": "monk",
+          "team": "townsfolk",
+          "name": {
+            "en": "Monk",
+            "zh_hans": "僧侣"
+          },
+          "ability": {
+            "en": "Each night*, choose a player (not yourself): they are safe from the Demon tonight.",
+            "zh_hans": "每个夜晚*，你要选择除你以外的一名玩家：当晚恶魔的负面能力对他无效。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Safe"
+          ]
+        },
+        {
+          "id": "slayer",
+          "team": "townsfolk",
+          "name": {
+            "en": "Slayer",
+            "zh_hans": "猎手"
+          },
+          "ability": {
+            "en": "Once per game, during the day, publicly choose a player: if they are the Demon, they die.",
+            "zh_hans": "每局游戏限一次，你可以在白天时公开选择一名玩家：如果他是恶魔，他死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "soldier",
+          "team": "townsfolk",
+          "name": {
+            "en": "Soldier",
+            "zh_hans": "士兵"
+          },
+          "ability": {
+            "en": "You are safe from the Demon.",
+            "zh_hans": "恶魔的负面能力对你无效。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "ravenkeeper",
+          "team": "townsfolk",
+          "name": {
+            "en": "Ravenkeeper",
+            "zh_hans": "守鸦人"
+          },
+          "ability": {
+            "en": "If you die at night, you are woken to choose a player: you learn their character.",
+            "zh_hans": "如果你在夜晚死亡，你会被唤醒，然后你要选择一名玩家：你会得知他的角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "mayor",
+          "team": "townsfolk",
+          "name": {
+            "en": "Mayor",
+            "zh_hans": "镇长"
+          },
+          "ability": {
+            "en": "If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead.",
+            "zh_hans": "如果只有三名玩家存活且白天没有人被处决，你的阵营获胜。如果你在夜晚即将死亡，可能会有一名其他玩家代替你死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "virgin",
+          "team": "townsfolk",
+          "name": {
+            "en": "Virgin",
+            "zh_hans": "贞洁者"
+          },
+          "ability": {
+            "en": "The 1st time you are nominated, if the nominator is a Townsfolk, they are executed immediately.",
+            "zh_hans": "当你首次被提名时，如果提名你的玩家是镇民，他立刻被处决。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "butler",
+          "team": "outsider",
+          "name": {
+            "en": "Butler",
+            "zh_hans": "管家"
+          },
+          "ability": {
+            "en": "Each night, choose a player (not yourself): tomorrow, you may only vote if they are voting too.",
+            "zh_hans": "每个夜晚，你要选择除你以外的一名玩家：明天白天，只有他投票时你才能投票。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Master"
+          ]
+        },
+        {
+          "id": "drunk",
+          "team": "outsider",
+          "name": {
+            "en": "Drunk",
+            "zh_hans": "酒鬼"
+          },
+          "ability": {
+            "en": "You do not know you are the Drunk. You think you are a Townsfolk character, but you are not.",
+            "zh_hans": "你不知道你是酒鬼。你以为你是一个镇民角色，但其实你不是。"
+          },
+          "setup": true,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "recluse",
+          "team": "outsider",
+          "name": {
+            "en": "Recluse",
+            "zh_hans": "陌客"
+          },
+          "ability": {
+            "en": "You might register as evil & as a Minion or Demon, even if dead.",
+            "zh_hans": "你可能会被当作邪恶阵营、爪牙角色或恶魔角色，即使你已死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "saint",
+          "team": "outsider",
+          "name": {
+            "en": "Saint",
+            "zh_hans": "圣徒"
+          },
+          "ability": {
+            "en": "If you die by execution, your team loses.",
+            "zh_hans": "如果你死于处决，你的阵营落败。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "poisoner",
+          "team": "minion",
+          "name": {
+            "en": "Poisoner",
+            "zh_hans": "投毒者"
+          },
+          "ability": {
+            "en": "Each night, choose a player: they are poisoned tonight and tomorrow day.",
+            "zh_hans": "每个夜晚，你要选择一名玩家：他在当晚和明天白天中毒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Poisoned"
+          ]
+        },
+        {
+          "id": "spy",
+          "team": "minion",
+          "name": {
+            "en": "Spy",
+            "zh_hans": "间谍"
+          },
+          "ability": {
+            "en": "Each night, you see the Grimoire. You might register as good & as a Townsfolk or Outsider, even if dead.",
+            "zh_hans": "每个夜晚，你能查看魔典。你可能会被当作善良阵营、镇民角色或外来者角色，即使你已死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "scarletwoman",
+          "team": "minion",
+          "name": {
+            "en": "Scarlet Woman",
+            "zh_hans": "红唇女郎"
+          },
+          "ability": {
+            "en": "If there are 5 or more players alive & the Demon dies, you become the Demon. (Travellers don't count.)",
+            "zh_hans": "如果大于等于五名玩家存活时（旅行者不计算在内）恶魔死亡，你变成那个恶魔。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Is The Demon"
+          ]
+        },
+        {
+          "id": "baron",
+          "team": "minion",
+          "name": {
+            "en": "Baron",
+            "zh_hans": "男爵"
+          },
+          "ability": {
+            "en": "There are extra Outsiders in play. [+2 Outsiders]",
+            "zh_hans": "会有额外的外来者在场。[+2 外来者]"
+          },
+          "setup": true,
+          "setup_effect": {
+            "en": "+2 Outsiders",
+            "zh_hans": "+2 外来者"
+          },
+          "reminders": []
+        },
+        {
+          "id": "imp",
+          "team": "demon",
+          "name": {
+            "en": "Imp",
+            "zh_hans": "小恶魔"
+          },
+          "ability": {
+            "en": "Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家：他死亡。如果你以这种方式自杀，一名爪牙会变成小恶魔。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        }
+      ],
+      "travellers": [
+        {
+          "id": "thief",
+          "team": "traveller",
+          "name": {
+            "en": "Thief",
+            "zh_hans": "窃贼"
+          },
+          "ability": {
+            "en": "Each night, choose a player (not yourself): their vote counts negatively tomorrow.",
+            "zh_hans": "每个夜晚，你要选择除你以外的一名玩家：明天白天他的投票会被算作负数。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Negative Vote"
+          ]
+        },
+        {
+          "id": "bureaucrat",
+          "team": "traveller",
+          "name": {
+            "en": "Bureaucrat",
+            "zh_hans": "官员"
+          },
+          "ability": {
+            "en": "Each night, choose a player (not yourself): their vote counts as 3 votes tomorrow.",
+            "zh_hans": "每个夜晚，你要选择除你以外的一名玩家：明天白天，他的投票算作三票。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "3 Votes"
+          ]
+        },
+        {
+          "id": "gunslinger",
+          "team": "traveller",
+          "name": {
+            "en": "Gunslinger",
+            "zh_hans": "枪手"
+          },
+          "ability": {
+            "en": "Each day, after the 1st vote has been tallied, you may choose a player that voted: they die.",
+            "zh_hans": "每个白天，当首次投票被统计后，你可以选择一名刚投过票的玩家：他死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "beggar",
+          "team": "traveller",
+          "name": {
+            "en": "Beggar",
+            "zh_hans": "乞丐"
+          },
+          "ability": {
+            "en": "You must use a vote token to vote. If a dead player gives you theirs, you learn their alignment. You are sober & healthy.",
+            "zh_hans": "你只能使用投票标记才能投票。死亡的玩家可以将他的投票标记给你，如果他这么做，你会得知他的阵营。你不会中毒和醉酒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "scapegoat",
+          "team": "traveller",
+          "name": {
+            "en": "Scapegoat",
+            "zh_hans": "替罪羊"
+          },
+          "ability": {
+            "en": "If a player of your alignment is executed, you might be executed instead.",
+            "zh_hans": "如果你的阵营的一名玩家被处决，你可能会代替他被处决。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        }
+      ],
+      "qa_path": "scripts/script-002/OFFICIAL_QA.md",
+      "reference_path": "scripts/script-002/reference/README.md",
+      "sources": {
+        "edition": "https://wiki.bloodontheclocktower.com/Trouble_Brewing",
+        "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
+        "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+      }
+    },
+    {
+      "id": "script-003",
+      "edition": "bmr",
+      "official": true,
+      "difficulty": "intermediate",
+      "name": {
+        "en": "Bad Moon Rising",
+        "zh_hans": "黯月初升"
+      },
+      "description": {
+        "en": "...is a death extravaganza. Demons kill multiple times per night, and Minions get in on the action too. Good players can take great risks to gain reliable information, but may accidentally kill their friends in the process. Luckily, there are many ways to keep players alive long past their use-by date. If the good team cannot determine which Minions and Demons are in play, however, their doom is all but certain.",
+        "zh_hans": "...是一场死亡盛宴。恶魔每晚能多次杀人，爪牙也会参与其中。善良玩家能冒着巨大风险来获得可靠的信息，但在这过程中也可能会意外杀死自己的朋友。幸运的是，游戏中有着多种方式能让命数已尽的玩家保持存活。然而，如果善良阵营无法确定有哪些爪牙和恶魔在场，那么一切都将迈向毁灭的深渊。"
+      },
+      "roles": [
+        {
+          "id": "grandmother",
+          "team": "townsfolk",
+          "name": {
+            "en": "Grandmother",
+            "zh_hans": "祖母"
+          },
+          "ability": {
+            "en": "You start knowing a good player & their character. If the Demon kills them, you die too.",
+            "zh_hans": "在你的首个夜晚，你会得知一名善良玩家和他的角色。如果恶魔杀死了他，你也会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Grandchild",
+            "Dead"
+          ]
+        },
+        {
+          "id": "sailor",
+          "team": "townsfolk",
+          "name": {
+            "en": "Sailor",
+            "zh_hans": "水手"
+          },
+          "ability": {
+            "en": "Each night, choose an alive player: either you or they are drunk until dusk. You can't die.",
+            "zh_hans": "每个夜晚，你要选择一名存活的玩家：你或他之一会醉酒直到下个黄昏。你不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Drunk"
+          ]
+        },
+        {
+          "id": "chambermaid",
+          "team": "townsfolk",
+          "name": {
+            "en": "Chambermaid",
+            "zh_hans": "侍女"
+          },
+          "ability": {
+            "en": "Each night, choose 2 alive players (not yourself): you learn how many woke tonight due to their ability.",
+            "zh_hans": "每个夜晚，你要选择除你以外的两名存活的玩家：你会得知他们中有几人在当晚因其自身能力而被唤醒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "innkeeper",
+          "team": "townsfolk",
+          "name": {
+            "en": "Innkeeper",
+            "zh_hans": "旅店老板"
+          },
+          "ability": {
+            "en": "Each night*, choose 2 players: they can't die tonight, but 1 is drunk until dusk.",
+            "zh_hans": "每个夜晚*，你要选择两名玩家：他们当晚不会死亡，但其中一人会醉酒到下个黄昏。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Safe",
+            "Safe",
+            "Drunk"
+          ]
+        },
+        {
+          "id": "gambler",
+          "team": "townsfolk",
+          "name": {
+            "en": "Gambler",
+            "zh_hans": "赌徒"
+          },
+          "ability": {
+            "en": "Each night*, choose a player & guess their character: if you guess wrong, you die.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家并猜测该玩家的角色：如果你猜错了，你会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        },
+        {
+          "id": "exorcist",
+          "team": "townsfolk",
+          "name": {
+            "en": "Exorcist",
+            "zh_hans": "驱魔人"
+          },
+          "ability": {
+            "en": "Each night*, choose a player (different to last night): the Demon, if chosen, learns who you are then doesn't wake tonight.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家（与上个夜晚不同）：如果你选中了恶魔，他会得知你是驱魔人，但他当晚不会因其自身能力而被唤醒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Chosen"
+          ]
+        },
+        {
+          "id": "gossip",
+          "team": "townsfolk",
+          "name": {
+            "en": "Gossip",
+            "zh_hans": "造谣者"
+          },
+          "ability": {
+            "en": "Each day, you may make a public statement. Tonight, if it was true, a player dies.",
+            "zh_hans": "每个白天，你可以公开发表一个声明。如果该声明正确，在当晚会有一名玩家死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        },
+        {
+          "id": "courtier",
+          "team": "townsfolk",
+          "name": {
+            "en": "Courtier",
+            "zh_hans": "侍臣"
+          },
+          "ability": {
+            "en": "Once per game, at night, choose a character: they are drunk for 3 nights & 3 days.",
+            "zh_hans": "每局游戏限一次，在夜晚时，你可以选择一个角色：如果该角色在场，该角色之一从当晚开始醉酒三天三夜。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Drunk 3",
+            "Drunk 2",
+            "Drunk 1",
+            "No Ability"
+          ]
+        },
+        {
+          "id": "professor",
+          "team": "townsfolk",
+          "name": {
+            "en": "Professor",
+            "zh_hans": "教授"
+          },
+          "ability": {
+            "en": "Once per game, at night*, choose a dead player: if they are a Townsfolk, they are resurrected.",
+            "zh_hans": "每局游戏限一次，在夜晚时*，你可以选择一名死亡的玩家：如果他是镇民，你会将他起死回生。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Alive",
+            "No Ability"
+          ]
+        },
+        {
+          "id": "minstrel",
+          "team": "townsfolk",
+          "name": {
+            "en": "Minstrel",
+            "zh_hans": "吟游诗人"
+          },
+          "ability": {
+            "en": "When a Minion dies by execution, all other players (except Travellers) are drunk until dusk tomorrow.",
+            "zh_hans": "当一名爪牙死于处决时，除了你和旅行者以外的所有其他玩家醉酒直到明天黄昏。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Everyone Is Drunk"
+          ]
+        },
+        {
+          "id": "tealady",
+          "team": "townsfolk",
+          "name": {
+            "en": "Tea Lady",
+            "zh_hans": "茶艺师"
+          },
+          "ability": {
+            "en": "If both your alive neighbors are good, they can't die.",
+            "zh_hans": "如果与你邻近的两名存活的玩家是善良的，他们不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Cannot Die",
+            "Cannot Die"
+          ]
+        },
+        {
+          "id": "fool",
+          "team": "townsfolk",
+          "name": {
+            "en": "Fool",
+            "zh_hans": "弄臣"
+          },
+          "ability": {
+            "en": "The 1st time you die, you don't.",
+            "zh_hans": "当你首次将要死亡时，你不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "pacifist",
+          "team": "townsfolk",
+          "name": {
+            "en": "Pacifist",
+            "zh_hans": "和平主义者"
+          },
+          "ability": {
+            "en": "Executed good players might not die.",
+            "zh_hans": "被处决的善良玩家可能不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "goon",
+          "team": "outsider",
+          "name": {
+            "en": "Goon",
+            "zh_hans": "莽夫"
+          },
+          "ability": {
+            "en": "Each night, the 1st player to choose you with their ability is drunk until dusk. You become their alignment.",
+            "zh_hans": "每个夜晚，首个使用其自身能力选择了你的玩家会醉酒直到下个黄昏。你会转变为他的阵营。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Drunk"
+          ]
+        },
+        {
+          "id": "lunatic",
+          "team": "outsider",
+          "name": {
+            "en": "Lunatic",
+            "zh_hans": "疯子"
+          },
+          "ability": {
+            "en": "You think you are a Demon, but you are not. The Demon knows who you are & who you choose at night.",
+            "zh_hans": "你以为你是一个恶魔，但其实你不是。恶魔知道你是疯子以及你在每个夜晚选择了哪些玩家。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Chosen",
+            "Chosen",
+            "Chosen"
+          ]
+        },
+        {
+          "id": "tinker",
+          "team": "outsider",
+          "name": {
+            "en": "Tinker",
+            "zh_hans": "修补匠"
+          },
+          "ability": {
+            "en": "You might die at any time.",
+            "zh_hans": "你随时可能死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        },
+        {
+          "id": "moonchild",
+          "team": "outsider",
+          "name": {
+            "en": "Moonchild",
+            "zh_hans": "月之子"
+          },
+          "ability": {
+            "en": "When you learn that you died, publicly choose 1 alive player. Tonight, if it was a good player, they die.",
+            "zh_hans": "当你得知你死亡时，你要公开选择一名存活的玩家。如果他是善良的，在当晚他会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        },
+        {
+          "id": "godfather",
+          "team": "minion",
+          "name": {
+            "en": "Godfather",
+            "zh_hans": "教父"
+          },
+          "ability": {
+            "en": "You start knowing which Outsiders are in play. If 1 died today, choose a player tonight: they die. [-1 or +1 Outsider]",
+            "zh_hans": "在你的首个夜晚，你会得知有哪些外来者角色在场。如果有外来者在白天死亡，你会在当晚被唤醒并且你要选择一名玩家：他死亡。[-1或+1外来者]"
+          },
+          "setup": true,
+          "setup_effect": {
+            "en": "-1 or +1 Outsider",
+            "zh_hans": "-1或+1外来者"
+          },
+          "reminders": [
+            "Died Today",
+            "Dead"
+          ]
+        },
+        {
+          "id": "devilsadvocate",
+          "team": "minion",
+          "name": {
+            "en": "Devil's Advocate",
+            "zh_hans": "魔鬼代言人"
+          },
+          "ability": {
+            "en": "Each night, choose a living player (different to last night): if executed tomorrow, they don't die.",
+            "zh_hans": "每个夜晚，你要选择一名存活的玩家（与上个夜晚不同）：如果明天白天他被处决，他不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Survives Execution"
+          ]
+        },
+        {
+          "id": "assassin",
+          "team": "minion",
+          "name": {
+            "en": "Assassin",
+            "zh_hans": "刺客"
+          },
+          "ability": {
+            "en": "Once per game, at night*, choose a player: they die, even if for some reason they could not.",
+            "zh_hans": "每局游戏限一次，在夜晚时*，你可以选择一名玩家：他死亡，即使因为任何原因让他不会死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead",
+            "No Ability"
+          ]
+        },
+        {
+          "id": "mastermind",
+          "team": "minion",
+          "name": {
+            "en": "Mastermind",
+            "zh_hans": "主谋"
+          },
+          "ability": {
+            "en": "If the Demon dies by execution (ending the game), play for 1 more day. If a player is then executed, their team loses.",
+            "zh_hans": "如果恶魔因为死于处决而因此导致游戏结束时，再额外进行一个夜晚和一个白天。在那个白天如果有玩家被处决，他的阵营落败。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "pukka",
+          "team": "demon",
+          "name": {
+            "en": "Pukka",
+            "zh_hans": "普卡"
+          },
+          "ability": {
+            "en": "Each night, choose a player: they are poisoned. The previously poisoned player dies then becomes healthy.",
+            "zh_hans": "每个夜晚，你要选择一名玩家：他中毒。上个因你的能力中毒的玩家会死亡并恢复健康。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Poisoned",
+            "Poisoned",
+            "Dead"
+          ]
+        },
+        {
+          "id": "shabaloth",
+          "team": "demon",
+          "name": {
+            "en": "Shabaloth",
+            "zh_hans": "沙巴洛斯"
+          },
+          "ability": {
+            "en": "Each night*, choose 2 players: they die. A dead player you chose last night might be regurgitated.",
+            "zh_hans": "每个夜晚*，你要选择两名玩家：他们死亡。你上个夜晚选择过且当前死亡的玩家之一可能会被你反刍。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead",
+            "Dead",
+            "Alive"
+          ]
+        },
+        {
+          "id": "po",
+          "team": "demon",
+          "name": {
+            "en": "Po",
+            "zh_hans": "珀"
+          },
+          "ability": {
+            "en": "Each night*, you may choose a player: they die. If your last choice was no-one, choose 3 players tonight.",
+            "zh_hans": "每个夜晚*，你可以选择一名玩家：他死亡。如果你上次选择时没有选择任何玩家，当晚你要选择三名玩家：他们死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead",
+            "Dead",
+            "Dead",
+            "3 Attacks"
+          ]
+        },
+        {
+          "id": "zombuul",
+          "team": "demon",
+          "name": {
+            "en": "Zombuul",
+            "zh_hans": "僵怖"
+          },
+          "ability": {
+            "en": "Each night*, if no-one died today, choose a player: they die. The 1st time you die, you live but register as dead.",
+            "zh_hans": "每个夜晚*，如果今天白天没有人死亡，你会被唤醒并要选择一名玩家：他死亡。当你首次死亡后，你仍存活，但会被当作死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Died Today",
+            "Dead"
+          ]
+        }
+      ],
+      "travellers": [
+        {
+          "id": "matron",
+          "team": "traveller",
+          "name": {
+            "en": "Matron",
+            "zh_hans": "女舍监"
+          },
+          "ability": {
+            "en": "Each day, you may choose up to 3 sets of 2 players to swap seats. Players may not leave their seats to talk in private.",
+            "zh_hans": "每个白天，你可以选择至多三对玩家交换座位。玩家不能离开座位私聊。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "judge",
+          "team": "traveller",
+          "name": {
+            "en": "Judge",
+            "zh_hans": "法官"
+          },
+          "ability": {
+            "en": "Once per game, if another player nominated, you may choose to force the current execution to pass or fail.",
+            "zh_hans": "每局游戏限一次，如果其他玩家发起了提名，你可以选择让本次提名直接执行处决或让投票无效。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "apprentice",
+          "team": "traveller",
+          "name": {
+            "en": "Apprentice",
+            "zh_hans": "学徒"
+          },
+          "ability": {
+            "en": "On your 1st night, you gain a Townsfolk ability (if good), or a Minion ability (if evil).",
+            "zh_hans": "在你的首个夜晚，如果你是善良的，你会获得一个镇民角色的能力；如果你是邪恶的，你会获得一个爪牙角色的能力。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Is The Apprentice"
+          ]
+        },
+        {
+          "id": "bishop",
+          "team": "traveller",
+          "name": {
+            "en": "Bishop",
+            "zh_hans": "主教"
+          },
+          "ability": {
+            "en": "Only the Storyteller can nominate. At least 1 opposing player must be nominated each day.",
+            "zh_hans": "只有说书人可以发起提名。每个白天说书人至少要提名一名你对立阵营的玩家。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Nominate Good",
+            "Nominate Evil"
+          ]
+        },
+        {
+          "id": "voudon",
+          "team": "traveller",
+          "name": {
+            "en": "Voudon",
+            "zh_hans": "巫毒师"
+          },
+          "ability": {
+            "en": "Only you & the dead can vote. They don't need a vote token to do so. A 50% majority isn't required.",
+            "zh_hans": "只有你和死亡的玩家可以投票，且投票不需要使用投票标记。忽略票数需要过半的要求。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        }
+      ],
+      "qa_path": "scripts/script-003/OFFICIAL_QA.md",
+      "reference_path": "scripts/script-003/reference/README.md",
+      "sources": {
+        "edition": "https://wiki.bloodontheclocktower.com/Bad_Moon_Rising",
+        "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
+        "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+      }
+    },
+    {
+      "id": "script-004",
+      "edition": "snv",
+      "official": true,
+      "difficulty": "intermediate",
+      "name": {
+        "en": "Sects & Violets",
+        "zh_hans": "梦殒春宵"
+      },
+      "description": {
+        "en": "...is the craziest of the three editions included in the base set. Good characters get amazing information each and every night. However, the evil team is extremely varied and threatening and can throw massive confusion into the mix. Characters change alignment. Players change characters. Even the evil team can lose track of who is who. This is also the first appearance of madness, which throws all manner of spanners into the works.",
+        "zh_hans": "...是前三个剧本套装中最疯狂的一个。善良的角色每晚都能得到惊人的信息。然而，邪恶阵营能够带来的威胁也多种多样，并且可以制造巨大的混乱。角色能力会让阵营发生变化，而玩家的角色也会发生变化。甚至是邪恶阵营也会在游戏中晕头转向，敌我不分。这也是疯狂机制第一次出现在游戏中，它为游戏增添了新的变数。"
+      },
+      "roles": [
+        {
+          "id": "clockmaker",
+          "team": "townsfolk",
+          "name": {
+            "en": "Clockmaker",
+            "zh_hans": "钟表匠"
+          },
+          "ability": {
+            "en": "You start knowing how many steps from the Demon to its nearest Minion.",
+            "zh_hans": "在你的首个夜晚，你会得知恶魔与爪牙之间最近的距离。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "snakecharmer",
+          "team": "townsfolk",
+          "name": {
+            "en": "Snake Charmer",
+            "zh_hans": "舞蛇人"
+          },
+          "ability": {
+            "en": "Each night, choose an alive player: a chosen Demon swaps characters & alignments with you & is then poisoned.",
+            "zh_hans": "每个夜晚，你要选择一名存活的玩家：如果你选中了恶魔，你和他交换角色和阵营，然后他中毒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Poisoned"
+          ]
+        },
+        {
+          "id": "mathematician",
+          "team": "townsfolk",
+          "name": {
+            "en": "Mathematician",
+            "zh_hans": "数学家"
+          },
+          "ability": {
+            "en": "Each night, you learn how many players’ abilities worked abnormally (since dawn) due to another character's ability.",
+            "zh_hans": "每个夜晚，你会得知有多少名玩家的能力因为其他角色的能力而未正常生效。（从上个黎明到你被唤醒时）"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Abnormal",
+            "Abnormal",
+            "Abnormal",
+            "Abnormal",
+            "Abnormal"
+          ]
+        },
+        {
+          "id": "dreamer",
+          "team": "townsfolk",
+          "name": {
+            "en": "Dreamer",
+            "zh_hans": "筑梦师"
+          },
+          "ability": {
+            "en": "Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.",
+            "zh_hans": "每个夜晚，你要选择除你及旅行者以外的一名玩家：你会得知一个善良角色和一个邪恶角色，该玩家是其中一个角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "flowergirl",
+          "team": "townsfolk",
+          "name": {
+            "en": "Flowergirl",
+            "zh_hans": "卖花女孩"
+          },
+          "ability": {
+            "en": "Each night*, you learn if a Demon voted today.",
+            "zh_hans": "每个夜晚*，你会得知在今天白天时是否有恶魔投过票。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Demon Voted",
+            "Demon Not Voted"
+          ]
+        },
+        {
+          "id": "towncrier",
+          "team": "townsfolk",
+          "name": {
+            "en": "Town Crier",
+            "zh_hans": "城镇公告员"
+          },
+          "ability": {
+            "en": "Each night*, you learn if a Minion nominated today.",
+            "zh_hans": "每个夜晚*，你会得知在今天白天时是否有爪牙发起过提名。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Minions Not Nominated",
+            "Minion Nominated"
+          ]
+        },
+        {
+          "id": "oracle",
+          "team": "townsfolk",
+          "name": {
+            "en": "Oracle",
+            "zh_hans": "神谕者"
+          },
+          "ability": {
+            "en": "Each night*, you learn how many dead players are evil.",
+            "zh_hans": "每个夜晚*，你会得知有多少名死亡的玩家是邪恶的。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "savant",
+          "team": "townsfolk",
+          "name": {
+            "en": "Savant",
+            "zh_hans": "博学者"
+          },
+          "ability": {
+            "en": "Each day, you may visit the Storyteller to learn 2 things in private: 1 is true & 1 is false.",
+            "zh_hans": "每个白天，你可以私下询问说书人以得知两条信息：一个是正确的，一个是错误的。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "seamstress",
+          "team": "townsfolk",
+          "name": {
+            "en": "Seamstress",
+            "zh_hans": "女裁缝"
+          },
+          "ability": {
+            "en": "Once per game, at night, choose 2 players (not yourself): you learn if they are the same alignment.",
+            "zh_hans": "每局游戏限一次，在夜晚时，你可以选择除你以外的两名玩家：你会得知他们是否为同一阵营。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "philosopher",
+          "team": "townsfolk",
+          "name": {
+            "en": "Philosopher",
+            "zh_hans": "哲学家"
+          },
+          "ability": {
+            "en": "Once per game, at night, choose a good character: gain that ability. If this character is in play, they are drunk.",
+            "zh_hans": "每局游戏限一次，在夜晚时，你可以选择一个善良角色：你获得该角色的能力。如果这个角色在场，他醉酒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Drunk"
+          ]
+        },
+        {
+          "id": "artist",
+          "team": "townsfolk",
+          "name": {
+            "en": "Artist",
+            "zh_hans": "艺术家"
+          },
+          "ability": {
+            "en": "Once per game, during the day, privately ask the Storyteller any yes/no question.",
+            "zh_hans": "每局游戏限一次，在白天时，你可以私下询问说书人一个是非问题，你会得知该问题的答案。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability"
+          ]
+        },
+        {
+          "id": "juggler",
+          "team": "townsfolk",
+          "name": {
+            "en": "Juggler",
+            "zh_hans": "杂耍艺人"
+          },
+          "ability": {
+            "en": "On your 1st day, publicly guess up to 5 players' characters. That night, you learn how many you got correct.",
+            "zh_hans": "在你的首个白天，你可以公开猜测任意玩家的角色最多五次。在当晚，你会得知猜测正确的角色数量。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Correct",
+            "Correct",
+            "Correct",
+            "Correct",
+            "Correct"
+          ]
+        },
+        {
+          "id": "sage",
+          "team": "townsfolk",
+          "name": {
+            "en": "Sage",
+            "zh_hans": "贤者"
+          },
+          "ability": {
+            "en": "If the Demon kills you, you learn that it is 1 of 2 players.",
+            "zh_hans": "如果恶魔杀死了你，在当晚你会被唤醒并得知两名玩家，其中一名是杀死你的那个恶魔。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "sweetheart",
+          "team": "outsider",
+          "name": {
+            "en": "Sweetheart",
+            "zh_hans": "心上人"
+          },
+          "ability": {
+            "en": "When you die, 1 player is drunk from now on.",
+            "zh_hans": "当你死亡时，会有一名玩家开始醉酒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Drunk"
+          ]
+        },
+        {
+          "id": "klutz",
+          "team": "outsider",
+          "name": {
+            "en": "Klutz",
+            "zh_hans": "呆瓜"
+          },
+          "ability": {
+            "en": "When you learn that you died, publicly choose 1 alive player: if they are evil, your team loses.",
+            "zh_hans": "当你得知你死亡时，你要公开选择一名存活的玩家：如果他是邪恶的，你的阵营落败。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "barber",
+          "team": "outsider",
+          "name": {
+            "en": "Barber",
+            "zh_hans": "理发师"
+          },
+          "ability": {
+            "en": "If you died today or tonight, the Demon may choose 2 players (not another Demon) to swap characters.",
+            "zh_hans": "如果你死亡，在当晚恶魔可以选择两名玩家（不能选择其他恶魔）交换角色。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Haircuts Tonight"
+          ]
+        },
+        {
+          "id": "mutant",
+          "team": "outsider",
+          "name": {
+            "en": "Mutant",
+            "zh_hans": "畸形秀演员"
+          },
+          "ability": {
+            "en": "If you are “mad” about being an Outsider, you might be executed.",
+            "zh_hans": "如果你“疯狂”地证明自己是外来者，你可能被处决。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "witch",
+          "team": "minion",
+          "name": {
+            "en": "Witch",
+            "zh_hans": "女巫"
+          },
+          "ability": {
+            "en": "Each night, choose a player: if they nominate tomorrow, they die. If just 3 players live, you lose this ability.",
+            "zh_hans": "每个夜晚，你要选择一名玩家：如果他明天白天发起提名，他死亡。如果只有三名存活的玩家，你失去此能力。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Cursed"
+          ]
+        },
+        {
+          "id": "cerenovus",
+          "team": "minion",
+          "name": {
+            "en": "Cerenovus",
+            "zh_hans": "洗脑师"
+          },
+          "ability": {
+            "en": "Each night, choose a player & a good character: they are “mad” they are this character tomorrow, or might be executed.",
+            "zh_hans": "每个夜晚，你要选择一名玩家和一个善良角色。他明天白天和夜晚需要“疯狂”地证明自己是这个角色，不然他可能被处决。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Mad"
+          ]
+        },
+        {
+          "id": "pithag",
+          "team": "minion",
+          "name": {
+            "en": "Pit-Hag",
+            "zh_hans": "麻脸巫婆"
+          },
+          "ability": {
+            "en": "Each night*, choose a player & a character they become (if not in play). If a Demon is made, deaths tonight are arbitrary.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家和一个角色，如果该角色不在场，他变成该角色。如果因此创造了一个恶魔，当晚的死亡由说书人决定。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "eviltwin",
+          "team": "minion",
+          "name": {
+            "en": "Evil Twin",
+            "zh_hans": "镜像双子"
+          },
+          "ability": {
+            "en": "You & an opposing player know each other. If the good player is executed, evil wins. Good can't win if you both live.",
+            "zh_hans": "你与一名对立阵营的玩家互相知道对方是什么角色。如果其中善良玩家被处决，邪恶阵营获胜。如果你们都存活，善良阵营无法获胜。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Twin"
+          ]
+        },
+        {
+          "id": "nodashii",
+          "team": "demon",
+          "name": {
+            "en": "No Dashii",
+            "zh_hans": "诺-达鲺"
+          },
+          "ability": {
+            "en": "Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家：他死亡。与你邻近的两名镇民中毒。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead",
+            "Poisoned",
+            "Poisoned"
+          ]
+        },
+        {
+          "id": "vigormortis",
+          "team": "demon",
+          "name": {
+            "en": "Vigormortis",
+            "zh_hans": "亡骨魔"
+          },
+          "ability": {
+            "en": "Each night*, choose a player: they die. Minions you kill keep their ability & poison 1 Townsfolk neighbor. [-1 Outsider]",
+            "zh_hans": "每个夜晚*，你要选择一名玩家：他死亡。被你杀死的爪牙保留他的能力，且与他邻近的两名镇民之一中毒。[-1外来者]"
+          },
+          "setup": true,
+          "setup_effect": {
+            "en": "-1 Outsider",
+            "zh_hans": "-1外来者"
+          },
+          "reminders": [
+            "Dead",
+            "Has Ability",
+            "Has Ability",
+            "Has Ability",
+            "Poisoned",
+            "Poisoned",
+            "Poisoned"
+          ]
+        },
+        {
+          "id": "vortox",
+          "team": "demon",
+          "name": {
+            "en": "Vortox",
+            "zh_hans": "涡流"
+          },
+          "ability": {
+            "en": "Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins.",
+            "zh_hans": "每个夜晚*，你要选择一名玩家：他死亡。镇民玩家的能力都会产生错误信息。如果白天没人被处决，邪恶阵营获胜。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead"
+          ]
+        },
+        {
+          "id": "fanggu",
+          "team": "demon",
+          "name": {
+            "en": "Fang Gu",
+            "zh_hans": "方古"
+          },
+          "ability": {
+            "en": "Each night*, choose a player: they die. The 1st Outsider this kills becomes an evil Fang Gu & you die instead. [+1 Outsider]",
+            "zh_hans": "每个夜晚*，你要选择一名玩家：他死亡。被该能力杀死的外来者改为变成邪恶的方古且你代替他死亡，但每局游戏仅能成功转化一次。[+1外来者]"
+          },
+          "setup": true,
+          "setup_effect": {
+            "en": "+1 Outsider",
+            "zh_hans": "+1外来者"
+          },
+          "reminders": [
+            "Dead",
+            "Once"
+          ]
+        }
+      ],
+      "travellers": [
+        {
+          "id": "barista",
+          "team": "traveller",
+          "name": {
+            "en": "Barista",
+            "zh_hans": "咖啡师"
+          },
+          "ability": {
+            "en": "Each night, until dusk, 1) a player becomes sober, healthy & gets true info, or 2) their ability works twice. They learn which.",
+            "zh_hans": "每个夜晚，直至下个黄昏，由说书人二选一：1）一名玩家解除并免受醉酒和中毒影响，且会得知正确信息；2）一名玩家的能力可以生效两次。该玩家会得知是哪个效果。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Sober & Healthy",
+            "Acts Twice",
+            "?",
+            "?"
+          ]
+        },
+        {
+          "id": "harlot",
+          "team": "traveller",
+          "name": {
+            "en": "Harlot",
+            "zh_hans": "流莺"
+          },
+          "ability": {
+            "en": "Each night*, choose a living player: if they agree, you learn their character, but you both might die.",
+            "zh_hans": "每个夜晚*，你要选择一名存活的玩家：如果他同意，你会得知他的角色，但是你们两个可能同时死亡。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "Dead",
+            "Dead"
+          ]
+        },
+        {
+          "id": "butcher",
+          "team": "traveller",
+          "name": {
+            "en": "Butcher",
+            "zh_hans": "屠夫"
+          },
+          "ability": {
+            "en": "Each day, after the 1st execution, you may nominate again.",
+            "zh_hans": "每个白天，首次处决后，你可以再次发起提名。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        },
+        {
+          "id": "bonecollector",
+          "team": "traveller",
+          "name": {
+            "en": "Bone Collector",
+            "zh_hans": "集骨者"
+          },
+          "ability": {
+            "en": "Once per game, at night*, choose a dead player: they regain their ability until dusk.",
+            "zh_hans": "每局游戏限一次，在夜晚时*，你可以选择一名死亡的玩家：他重新获得能力直到下个黄昏。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": [
+            "No Ability",
+            "Has Ability"
+          ]
+        },
+        {
+          "id": "deviant",
+          "team": "traveller",
+          "name": {
+            "en": "Deviant",
+            "zh_hans": "怪咖"
+          },
+          "ability": {
+            "en": "If you were funny today, you cannot die by exile.",
+            "zh_hans": "如果你表现得很有趣，当天你不能被流放。"
+          },
+          "setup": false,
+          "setup_effect": {
+            "en": null,
+            "zh_hans": null
+          },
+          "reminders": []
+        }
+      ],
+      "qa_path": "scripts/script-004/OFFICIAL_QA.md",
+      "reference_path": "scripts/script-004/reference/README.md",
+      "sources": {
+        "edition": "https://wiki.bloodontheclocktower.com/Sects_%26_Violets",
+        "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
+        "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+      }
+    }
+  ]
+}

@@ -209,6 +209,14 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Frontend
+node_modules/
+frontend/dist/
+
+# Local storyteller state
+.data/
+
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

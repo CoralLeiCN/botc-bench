@@ -1,0 +1,126 @@
+export type Team = "townsfolk" | "outsider" | "minion" | "demon" | "traveller";
+export type Alignment = "good" | "evil" | "unknown";
+export type GamePhase = "setup" | "first_night" | "day" | "night" | "finished";
+export type MarkerType =
+  | "drunk"
+  | "poisoned"
+  | "protected"
+  | "ability_used"
+  | "red_herring"
+  | "mad"
+  | "custom";
+
+export interface LocalizedText {
+  en: string | null;
+  zh_hans: string | null;
+}
+
+export interface Role {
+  id: string;
+  team: Team;
+  name: LocalizedText;
+  ability: LocalizedText;
+  setup: boolean;
+  setup_effect: LocalizedText;
+  reminders: string[];
+}
+
+export interface ScriptSources {
+  edition: string;
+  english_roles: string;
+  english_locale: string;
+  zh_hans: string;
+}
+
+export interface Script {
+  id: string;
+  edition: string;
+  official: boolean;
+  difficulty: "beginner" | "intermediate";
+  name: LocalizedText;
+  description: LocalizedText;
+  roles: Role[];
+  travellers: Role[];
+  qa_path: string;
+  reference_path: string;
+  sources: ScriptSources;
+}
+
+export interface Marker {
+  id: string;
+  type: MarkerType;
+  label: string;
+  source_role_id: string | null;
+  expires: string | null;
+  note: string;
+}
+
+export interface Seat {
+  id: string;
+  position: number;
+  player_name: string;
+  role_id: string | null;
+  alive: boolean;
+  alignment: Alignment;
+  markers: Marker[];
+  notes: string;
+}
+
+export interface Composition {
+  townsfolk: number;
+  outsider: number;
+  minion: number;
+  demon: number;
+  traveller: number;
+  manual: boolean;
+}
+
+export interface GameDraft {
+  schema_version: 1;
+  name: string;
+  script_id: string;
+  player_count: number;
+  composition: Composition;
+  seats: Seat[];
+  phase: GamePhase;
+  day_number: number;
+  notes: string;
+}
+
+export interface GameWrite extends GameDraft {
+  expected_version?: number;
+}
+
+export interface GameRecord {
+  id: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  draft: GameDraft;
+}
+
+export interface GameSummary {
+  id: string;
+  version: number;
+  name: string;
+  script_id: string;
+  player_count: number;
+  updated_at: string;
+}
+
+export interface HarnessStatus {
+  enabled: boolean;
+  available: boolean;
+  mode: "read-only";
+  detail: string;
+}
+
+export interface ReasonResponse {
+  answer: string;
+  duration_ms: number;
+}
+
+export interface ValidationIssue {
+  level: "warning" | "error";
+  message: string;
+}

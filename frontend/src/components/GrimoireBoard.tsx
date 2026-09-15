@@ -4,6 +4,7 @@ import { allRoles, assignedCounts } from "../game";
 import type { GameDraft, Script, ValidationIssue } from "../types";
 
 interface GrimoireBoardProps {
+  replaying?: boolean;
   game: GameDraft;
   script: Script;
   selectedSeatId: string | null;
@@ -21,6 +22,7 @@ const phaseLabels: Record<GameDraft["phase"], string> = {
 };
 
 export function GrimoireBoard({
+  replaying = false,
   game,
   script,
   selectedSeatId,
@@ -39,7 +41,7 @@ export function GrimoireBoard({
     <main className="board-panel panel-shell">
       <div className="board-toolbar">
         <div>
-          <span className="eyebrow">GRIMOIRE</span>
+          <span className="eyebrow">{replaying ? "REPLAY · 历史局面" : "GRIMOIRE"}</span>
           <h1>{script.name.zh_hans}</h1>
           <small>{script.name.en}</small>
         </div>
@@ -105,7 +107,7 @@ export function GrimoireBoard({
 
         <div className="board-center">
           <span className="clock-hand" aria-hidden="true" />
-          <span className="center-kicker">CURRENT STATE</span>
+          <span className="center-kicker">{replaying ? "REPLAY" : "CURRENT STATE"}</span>
           <strong>
             {assignedTotal}<small> / {game.player_count}</small>
           </strong>
@@ -116,7 +118,7 @@ export function GrimoireBoard({
               <b>{roleById.get(selectedRoleId)?.name.zh_hans}</b>
             </p>
           ) : (
-            <p className="assignment-hint">先在左侧选择角色，或直接检查玩家</p>
+            <p className="assignment-hint">{replaying ? "正在回放 · 点击玩家查看当时状态" : "先在左侧选择角色，或直接检查玩家"}</p>
           )}
         </div>
       </div>

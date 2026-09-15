@@ -10,6 +10,7 @@ import { allRoles, assignedCounts, TEAM_SHORT } from "../game";
 import type { GameDraft, GameSummary, Script, Team } from "../types";
 
 interface ToolbarProps {
+  readOnly?: boolean;
   scripts: Script[];
   game: GameDraft;
   script: Script;
@@ -30,6 +31,7 @@ interface ToolbarProps {
 const teams: Team[] = ["townsfolk", "outsider", "minion", "demon"];
 
 export function Toolbar({
+  readOnly = false,
   scripts,
   game,
   script,
@@ -65,6 +67,7 @@ export function Toolbar({
         <label className="compact-field game-name-field">
           <span>局面</span>
           <input
+            disabled={readOnly}
             value={game.name}
             onChange={(event) => onNameChange(event.target.value)}
             maxLength={120}
@@ -73,7 +76,7 @@ export function Toolbar({
 
         <label className="compact-field script-field">
           <span>剧本</span>
-          <select value={game.script_id} onChange={(event) => onScriptChange(event.target.value)}>
+          <select disabled={readOnly} value={game.script_id} onChange={(event) => onScriptChange(event.target.value)}>
             {scripts.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name.zh_hans} · {item.name.en}
@@ -90,12 +93,13 @@ export function Toolbar({
             <button
               type="button"
               onClick={() => onPlayerCountChange(game.player_count - 1)}
-              disabled={game.player_count <= 5}
+              disabled={readOnly || game.player_count <= 5}
               aria-label="减少玩家"
             >
               −
             </button>
             <input
+              disabled={readOnly}
               type="number"
               min={5}
               max={20}
@@ -105,7 +109,7 @@ export function Toolbar({
             <button
               type="button"
               onClick={() => onPlayerCountChange(game.player_count + 1)}
-              disabled={game.player_count >= 20}
+              disabled={readOnly || game.player_count >= 20}
               aria-label="增加玩家"
             >
               +

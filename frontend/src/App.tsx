@@ -5,16 +5,20 @@ import { CodexPanel } from "./components/CodexPanel";
 import { GrimoireBoard } from "./components/GrimoireBoard";
 import { Inspector } from "./components/Inspector";
 import { RolePalette } from "./components/RolePalette";
+import { Timeline } from "./components/Timeline";
 import { Toolbar } from "./components/Toolbar";
 import {
   allRoles,
+  compositionTotal,
   createDraft,
   hasSeatData,
   resizeSeats,
   suggestedComposition,
   validateDraft,
 } from "./game";
+import { createEntry, recordChange } from "./timeline";
 import type {
+  BranchOrigin,
   Composition,
   GameDraft,
   GameRecord,
@@ -22,6 +26,7 @@ import type {
   HarnessStatus,
   Script,
   Seat,
+  TimelineEntry,
 } from "./types";
 
 interface RecordState {
@@ -34,7 +39,16 @@ export default function App() {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [savedGames, setSavedGames] = useState<GameSummary[]>([]);
   const [harnessStatus, setHarnessStatus] = useState<HarnessStatus | null>(null);
-  const [game, setGame] = useState<GameDraft | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const game = timeline[timeline.length - 1]?.snapshot ?? null;
+  const [replayIndex, setReplayIndex] = useState<number | null>(null);
+  const [branchOrigin, setBranchOrigin] = useState<BranchOrigin | null>(null);
+  const [branching, setBranching] = useState(false);
+  const [autoSaveFailed, setAutoSaveFailed] = useState(false);
+  const protectedTimelineLengthRef = useRef(0);
+  const branchingRef = useRef(false);
+  const displayedGame = replayIndex === null ? game : timeline[replayIndex]?.snapshot ?? game;
+  const replaying = replayIndex !== null;
   const [record, setRecord] = useState<RecordState | null>(null);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -62,7 +76,7 @@ export default function App() {
         setSavedGames(gameData);
         setHarnessStatus(status);
         const initial = createDraft(scriptData[0]);
-        setGame(initial);
+        setTimeline([createEntry(initial, "开始记录", "initial")]);
         setSelectedSeatId(initial.seats[0].id);
       })
       .catch((error: unknown) => {
@@ -74,16 +88,16 @@ export default function App() {
   }, []);
 
   const script = useMemo(
-    () => scripts.find((item) => item.id === game?.script_id) ?? null,
-    [game?.script_id, scripts],
+    () => scripts.find((item) => item.id === displayedGame?.script_id) ?? null,
+    [displayedGame?.script_id, scripts],
   );
   const selectedSeat = useMemo(
-    () => game?.seats.find((seat) => seat.id === selectedSeatId) ?? null,
-    [game?.seats, selectedSeatId],
+    () => displayedGame?.seats.find((seat) => seat.id === selectedSeatId) ?? null,
+    [displayedGame?.seats, selectedSeatId],
   );
   const issues = useMemo(
-    () => (game && script ? validateDraft(game, script) : []),
-    [game, script],
+    () => (displayedGame && script ? validateDraft(displayedGame, script) : []),
+    [displayedGame, script],
   );
 
   const invalidateCodexContext = useCallback(() => {
@@ -94,13 +108,21 @@ export default function App() {
 
   const updateGame = useCallback(
     (updater: (current: GameDraft) => GameDraft) => {
+      if (replaying || branchingRef.current) return;
       gameRevisionRef.current += 1;
       invalidateCodexContext();
-      setGame((current) => (current ? updater(current) : current));
+      const metadata = { id: crypto.randomUUID(), recorded_at: new Date().toISOString() };
+      const protectedLength = protectedTimelineLengthRef.current;
+      setTimeline((current) => {
+        const last = current[current.length - 1];
+        return last
+          ? recordChange(current, updater(last.snapshot), scripts, metadata, protectedLength)
+          : current;
+      });
       setDirty(true);
       setNotice(null);
     },
-    [invalidateCodexContext],
+    [invalidateCodexContext, replaying, scripts],
   );
 
   const refreshSavedGames = useCallback(async () => {
@@ -108,45 +130,67 @@ export default function App() {
   }, []);
 
   const saveGame = useCallback(async () => {
-    if (!game || savingRef.current) return;
+    if (!game || savingRef.current) return null;
     if (loadingGameRef.current) {
       setNotice("请等待当前存档载入完成后再保存");
-      return;
+      return null;
     }
     const savedRevision = gameRevisionRef.current;
     const savedDocument = documentEpochRef.current;
+    protectedTimelineLengthRef.current = timeline.length;
     savingRef.current = true;
     setSaving(true);
     setNotice(null);
     try {
       const saved = record
-        ? await api.updateGame(record.id, { ...game, expected_version: record.version })
-        : await api.createGame(game);
+        ? await api.updateGame(record.id, { ...game, timeline, expected_version: record.version })
+        : await api.createGame({ ...game, timeline });
       if (documentEpochRef.current !== savedDocument) {
         await refreshSavedGames();
-        return;
+        return null;
       }
       setRecord({ id: saved.id, version: saved.version, updatedAt: saved.updated_at });
       if (gameRevisionRef.current === savedRevision) {
-        setGame(saved.draft);
+        setTimeline(saved.timeline);
         setDirty(false);
-        setNotice("局面已保存到本机 SQLite");
+        setNotice(null);
       } else {
         setNotice("保存期间产生了新修改：旧快照已保存，当前修改仍待保存");
       }
+      setAutoSaveFailed(false);
       await refreshSavedGames();
+      return gameRevisionRef.current === savedRevision ? saved : null;
     } catch (error) {
+      setAutoSaveFailed(true);
       const message = readError(error);
       setNotice(
         error instanceof ApiFailure && error.status === 409
           ? "保存冲突：该存档已被其他页面更新，请重新载入后再保存"
-          : `保存失败：${message}`,
+          : `保存失败：${message}。自动保存已暂停，请修正后点击保存重试。`,
       );
+      return null;
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [game, record, refreshSavedGames]);
+  }, [game, timeline, record, refreshSavedGames]);
+
+  useEffect(() => {
+    if (
+      !dirty || saving || loadingGame || branching || autoSaveFailed || !game ||
+      !game.name.trim() || compositionTotal(game.composition) !== game.player_count ||
+      game.seats.some((seat) => seat.markers.some((marker) => !marker.label))
+    ) return;
+    const timer = window.setTimeout(() => { void saveGame(); }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [dirty, saving, loadingGame, branching, autoSaveFailed, game, saveGame]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -233,7 +277,7 @@ export default function App() {
   const chooseSeat = (seatId: string) => {
     if (seatId !== selectedSeatId) invalidateCodexContext();
     setSelectedSeatId(seatId);
-    if (!selectedRoleId || !script) return;
+    if (replaying || branchingRef.current || !selectedRoleId || !script) return;
     const selectedRole = allRoles(script).find((role) => role.id === selectedRoleId);
     updateGame((current) => {
       const seats = current.seats.map((seat) =>
@@ -298,7 +342,7 @@ export default function App() {
   };
 
   const newGame = () => {
-    if (!script) return;
+    if (!script || branchingRef.current) return;
     if (loadingGameRef.current) {
       setNotice("请等待当前存档载入完成后再新建局面");
       return;
@@ -312,7 +356,11 @@ export default function App() {
     documentEpochRef.current += 1;
     gameRevisionRef.current += 1;
     invalidateCodexContext();
-    setGame(draft);
+    setTimeline([createEntry(draft, "开始记录", "initial")]);
+    protectedTimelineLengthRef.current = 0;
+    setReplayIndex(null);
+    setBranchOrigin(null);
+    setAutoSaveFailed(false);
     setRecord(null);
     setSelectedSeatId(draft.seats[0].id);
     setSelectedRoleId(null);
@@ -322,7 +370,7 @@ export default function App() {
   };
 
   const loadGame = async (id: string) => {
-    if (!id) return;
+    if (!id || branchingRef.current) return;
     if (loadingGameRef.current) {
       setNotice("已有存档正在载入，请稍候");
       return;
@@ -348,7 +396,11 @@ export default function App() {
       documentEpochRef.current += 1;
       gameRevisionRef.current += 1;
       invalidateCodexContext();
-      setGame(loaded.draft);
+      setTimeline(loaded.timeline);
+      protectedTimelineLengthRef.current = loaded.timeline.length;
+      setReplayIndex(null);
+      setBranchOrigin(loaded.branch_origin);
+      setAutoSaveFailed(false);
       setRecord({ id: loaded.id, version: loaded.version, updatedAt: loaded.updated_at });
       setSelectedSeatId(loaded.draft.seats[0]?.id ?? null);
       setSelectedRoleId(null);
@@ -364,12 +416,12 @@ export default function App() {
   };
 
   const askCodex = async (question: string) => {
-    if (!game || codexBusy) return;
+    if (!displayedGame || codexBusy) return;
     const requestContext = codexContextEpochRef.current;
     setCodexBusy(true);
     setCodexError(null);
     try {
-      const result = await api.reason(game, question, selectedSeatId);
+      const result = await api.reason(displayedGame, question, selectedSeatId);
       if (codexContextEpochRef.current === requestContext) {
         setCodexAnswer(result.answer);
       } else {
@@ -379,6 +431,53 @@ export default function App() {
       setCodexError(readError(error));
     } finally {
       setCodexBusy(false);
+    }
+  };
+
+  const seek = (index: number | null) => {
+    invalidateCodexContext();
+    setSelectedRoleId(null);
+    setReplayIndex(index);
+  };
+
+  const addEvent = (note: string) => {
+    if (!game || replaying || branchingRef.current || !note.trim()) return;
+    gameRevisionRef.current += 1;
+    const entry = createEntry(game, "说书人记录", "note", note.trim());
+    setTimeline((current) => [...current, entry]);
+    setDirty(true);
+    setNotice(null);
+  };
+
+  const branchFromReplay = async () => {
+    if (
+      replayIndex === null || !timeline[replayIndex] || branchingRef.current || savingRef.current
+    ) return;
+    const eventId = timeline[replayIndex].id;
+    branchingRef.current = true;
+    setBranching(true);
+    try {
+      const source = dirty || !record ? await saveGame() : record;
+      if (!source) return;
+      const branched = await api.branchGame(source.id, eventId, source.version);
+      documentEpochRef.current += 1;
+      gameRevisionRef.current += 1;
+      invalidateCodexContext();
+      setTimeline(branched.timeline);
+      protectedTimelineLengthRef.current = branched.timeline.length;
+      setRecord({ id: branched.id, version: branched.version, updatedAt: branched.updated_at });
+      setBranchOrigin(branched.branch_origin);
+      setAutoSaveFailed(false);
+      setReplayIndex(null);
+      setSelectedSeatId(branched.draft.seats[0]?.id ?? null);
+      setDirty(false);
+      setNotice("已创建并保存分支，可以从这个时刻继续编辑");
+      await refreshSavedGames();
+    } catch (error) {
+      setNotice(`创建分支失败：${readError(error)}`);
+    } finally {
+      branchingRef.current = false;
+      setBranching(false);
     }
   };
 
@@ -393,7 +492,7 @@ export default function App() {
     );
   }
 
-  if (!game || !script) {
+  if (!game || !displayedGame || !script) {
     return (
       <div className="loading-screen">
         <LoaderCircle size={24} className="spin" />
@@ -405,14 +504,15 @@ export default function App() {
   return (
     <div className="app-shell">
       <Toolbar
+        readOnly={replaying || branching}
         scripts={scripts}
-        game={game}
+        game={displayedGame}
         script={script}
         savedGames={savedGames}
         currentGameId={record?.id ?? null}
         dirty={dirty}
         saving={saving}
-        loadingGame={loadingGame}
+        loadingGame={loadingGame || branching}
         lastSavedAt={record?.updatedAt ?? null}
         onNameChange={(name) => updateGame((current) => ({ ...current, name }))}
         onScriptChange={changeScript}
@@ -432,38 +532,41 @@ export default function App() {
       )}
 
       <div className="workspace-grid">
-        <RolePalette
-          script={script}
-          game={game}
-          selectedRoleId={selectedRoleId}
-          onSelectRole={setSelectedRoleId}
-          onCompositionChange={(composition: Composition) =>
-            updateGame((current) => ({ ...current, composition }))
-          }
-          onResetComposition={() =>
-            updateGame((current) => ({
-              ...current,
-              composition: suggestedComposition(
-                current.player_count,
-                current.seats.map((seat) => seat.role_id),
-                script.travellers.map((role) => role.id),
-              ),
-            }))
-          }
-        />
-
+        <fieldset className="workspace-controls" disabled={replaying || branching}>
+          <RolePalette
+            script={script}
+            game={displayedGame}
+            selectedRoleId={selectedRoleId}
+            onSelectRole={setSelectedRoleId}
+            onCompositionChange={(composition: Composition) =>
+              updateGame((current) => ({ ...current, composition }))
+            }
+            onResetComposition={() =>
+              updateGame((current) => ({
+                ...current,
+                composition: suggestedComposition(
+                  current.player_count,
+                  current.seats.map((seat) => seat.role_id),
+                  script.travellers.map((role) => role.id),
+                ),
+              }))
+            }
+          />
+        </fieldset>
         <GrimoireBoard
-          game={game}
+          game={displayedGame}
           script={script}
           selectedSeatId={selectedSeatId}
-          selectedRoleId={selectedRoleId}
+          selectedRoleId={replaying ? null : selectedRoleId}
+          replaying={replaying}
           issues={issues}
           onSeatClick={chooseSeat}
         />
 
         <aside className="right-panel panel-shell">
           <Inspector
-            game={game}
+            readOnly={replaying || branching}
+            game={displayedGame}
             script={script}
             seat={selectedSeat}
             onSeatChange={changeSeat}
@@ -483,6 +586,18 @@ export default function App() {
           />
         </aside>
       </div>
+      <Timeline
+        key={documentEpochRef.current}
+        entries={timeline}
+        replayIndex={replayIndex}
+        branchOrigin={branchOrigin}
+        busy={saving || loadingGame || branching}
+        dirty={dirty || !record}
+        saveFailed={autoSaveFailed}
+        onSeek={seek}
+        onAddEvent={addEvent}
+        onBranch={() => void branchFromReplay()}
+      />
     </div>
   );
 }

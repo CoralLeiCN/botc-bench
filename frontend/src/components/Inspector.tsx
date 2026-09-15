@@ -13,6 +13,7 @@ import { allRoles, marker, TEAM_LABELS } from "../game";
 import type { GameDraft, MarkerType, Script, Seat, Team } from "../types";
 
 interface InspectorProps {
+  readOnly?: boolean;
   game: GameDraft;
   script: Script;
   seat: Seat | null;
@@ -32,6 +33,7 @@ const markerPresets: Array<{ type: MarkerType; label: string }> = [
 ];
 
 export function Inspector({
+  readOnly = false,
   game,
   script,
   seat,
@@ -64,7 +66,7 @@ export function Inspector({
 
   const addCustom = () => {
     const label = customMarker.trim();
-    if (!seat || !label) return;
+    if (!seat || !label || seat.markers.length >= 32) return;
     onSeatChange({ ...seat, markers: [...seat.markers, marker("custom", label)] });
     setCustomMarker("");
   };
@@ -78,10 +80,10 @@ export function Inspector({
         </div>
         {seat && (
           <div className="seat-move-buttons">
-            <button type="button" onClick={() => onMoveSeat(-1)} title="逆时针移动">
+            <button disabled={readOnly} type="button" onClick={() => onMoveSeat(-1)} title="逆时针移动">
               <ArrowLeft size={14} />
             </button>
-            <button type="button" onClick={() => onMoveSeat(1)} title="顺时针移动">
+            <button disabled={readOnly} type="button" onClick={() => onMoveSeat(1)} title="顺时针移动">
               <ArrowRight size={14} />
             </button>
           </div>
@@ -94,7 +96,7 @@ export function Inspector({
           <p>点击魔典中的座位开始编辑。</p>
         </div>
       ) : (
-        <div className="inspector-form">
+        <fieldset className="inspector-form inspector-fields" disabled={readOnly}>
           <div className="field-row two-columns">
             <label>
               <span>玩家名</span>
@@ -174,6 +176,7 @@ export function Inspector({
                   <button
                     type="button"
                     key={preset.type}
+                    disabled={!active && seat.markers.length >= 32}
                     className={active ? "active" : ""}
                     onClick={() => toggleMarker(preset.type, preset.label)}
                   >
@@ -195,7 +198,7 @@ export function Inspector({
                 placeholder="自定义标记"
                 maxLength={80}
               />
-              <button type="button" onClick={addCustom} disabled={!customMarker.trim()}>
+              <button type="button" onClick={addCustom} disabled={!customMarker.trim() || seat.markers.length >= 32}>
                 <Plus size={14} />
               </button>
             </div>
@@ -282,47 +285,49 @@ export function Inspector({
               placeholder="私聊、已知信息、说书人提醒…"
             />
           </label>
-        </div>
+        </fieldset>
       )}
 
       <details className="game-meta-details">
         <summary>局面阶段与全局备注</summary>
-        <div className="field-row two-columns">
-          <label>
-            <span>阶段</span>
-            <select
-              value={game.phase}
-              onChange={(event) =>
-                onGameMetaChange({ phase: event.target.value as GameDraft["phase"] })
-              }
-            >
-              <option value="setup">配置中</option>
-              <option value="first_night">首夜</option>
-              <option value="day">白天</option>
-              <option value="night">夜晚</option>
-              <option value="finished">已结束</option>
-            </select>
-          </label>
-          <label>
-            <span>天数</span>
-            <input
-              type="number"
-              min={0}
-              max={99}
-              value={game.day_number}
-              onChange={(event) => onGameMetaChange({ day_number: Number(event.target.value) })}
+        <fieldset className="inspector-fields" disabled={readOnly}>
+          <div className="field-row two-columns">
+            <label>
+              <span>阶段</span>
+              <select
+                value={game.phase}
+                onChange={(event) =>
+                  onGameMetaChange({ phase: event.target.value as GameDraft["phase"] })
+                }
+              >
+                <option value="setup">配置中</option>
+                <option value="first_night">首夜</option>
+                <option value="day">白天</option>
+                <option value="night">夜晚</option>
+                <option value="finished">已结束</option>
+              </select>
+            </label>
+            <label>
+              <span>天数</span>
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={game.day_number}
+                onChange={(event) => onGameMetaChange({ day_number: Math.max(0, Math.min(99, Math.round(Number(event.target.value) || 0))) })}
+              />
+            </label>
+          </div>
+          <label className="notes-field">
+            <span>全局备注</span>
+            <textarea
+              rows={2}
+              maxLength={5000}
+              value={game.notes}
+              onChange={(event) => onGameMetaChange({ notes: event.target.value })}
             />
           </label>
-        </div>
-        <label className="notes-field">
-          <span>全局备注</span>
-          <textarea
-            rows={2}
-            maxLength={5000}
-            value={game.notes}
-            onChange={(event) => onGameMetaChange({ notes: event.target.value })}
-          />
-        </label>
+        </fieldset>
       </details>
     </section>
   );

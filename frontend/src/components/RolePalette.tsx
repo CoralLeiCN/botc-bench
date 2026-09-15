@@ -49,7 +49,7 @@ export function RolePalette({
   const changeComposition = (key: keyof Omit<Composition, "manual">, value: number) => {
     onCompositionChange({
       ...game.composition,
-      [key]: Math.max(0, Math.min(key === "traveller" ? 5 : 20, value || 0)),
+      [key]: Math.max(0, Math.min(key === "traveller" ? 5 : 20, Math.round(value || 0))),
       manual: true,
     });
   };

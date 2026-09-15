@@ -1,4 +1,5 @@
 import type {
+  GameDraft,
   GameRecord,
   GameSummary,
   GameWrite,
@@ -26,8 +27,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`;
     try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) message = body.detail;
+      const body = (await response.json()) as { detail?: unknown };
+      if (typeof body.detail === "string") message = body.detail;
+      else if (Array.isArray(body.detail)) {
+        message = body.detail.map((issue: { msg?: string }) => issue.msg ?? "无效数据").join("；");
+      }
     } catch {
       // Preserve the HTTP fallback when an upstream error has no JSON body.
     }
@@ -47,12 +51,17 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(game),
     }),
+  branchGame: (id: string, eventId: string, version: number) =>
+    request<GameRecord>(`/api/games/${encodeURIComponent(id)}/branch`, {
+      method: "POST",
+      body: JSON.stringify({ event_id: eventId, expected_version: version }),
+    }),
   harnessStatus: () => request<HarnessStatus>("/api/harness/status"),
-  reason: (game: GameWrite, question: string, selectedSeatId: string | null) =>
+  reason: (game: GameDraft, question: string, selectedSeatId: string | null) =>
     request<ReasonResponse>("/api/reason", {
       method: "POST",
       body: JSON.stringify({
-        game: { ...game, expected_version: undefined },
+        game,
         question,
         selected_seat_id: selectedSeatId,
       }),

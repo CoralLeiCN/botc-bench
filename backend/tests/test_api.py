@@ -128,3 +128,191 @@ def test_disabled_harness_reports_unavailable(client: TestClient) -> None:
     status = client.get("/api/harness/status")
     assert status.status_code == 200
     assert status.json()["available"] is False
+
+
+def timeline_event(payload, event_id="event-1", kind="initial", note=""):
+    from copy import deepcopy
+
+    return {
+        "id": event_id,
+        "recorded_at": "2026-09-16T12:00:00Z",
+        "kind": kind,
+        "summary": "测试事件",
+        "note": note,
+        "snapshot": deepcopy(payload),
+    }
+
+
+def test_timeline_round_trip_and_branch_isolation(client: TestClient) -> None:
+    payload = draft_payload()
+    initial = timeline_event(payload)
+    payload["phase"] = "first_night"
+    night = timeline_event(payload, "event-2", "note", "共情者得知 1")
+    payload["seats"][0]["alive"] = False
+    death = timeline_event(payload, "event-3", "change")
+    created = client.post("/api/games", json={**payload, "timeline": [initial, night, death]})
+    assert created.status_code == 201
+    record = created.json()
+    source_url = f"/api/games/{record['id']}"
+    reloaded = client.get(source_url).json()
+    assert len(reloaded["timeline"]) == 3
+    assert reloaded["timeline"][0]["snapshot"]["phase"] == "setup"
+    assert reloaded["timeline"][1]["note"] == "共情者得知 1"
+    assert reloaded["timeline"][1]["snapshot"]["seats"][0]["alive"] is True
+    assert reloaded["timeline"][2]["snapshot"]["seats"][0]["alive"] is False
+
+    branched = client.post(
+        source_url + "/branch",
+        json={
+            "event_id": "event-2",
+            "expected_version": 1,
+        },
+    )
+    assert branched.status_code == 201
+    branch = branched.json()
+    assert branch["id"] != record["id"]
+    assert branch["draft"]["seats"][0]["alive"] is True
+    assert branch["timeline"][:2] == reloaded["timeline"][:2]
+    assert branch["timeline"][-1]["kind"] == "branch"
+    assert all(event["id"] != "event-3" for event in branch["timeline"])
+    assert branch["branch_origin"]["game_id"] == record["id"]
+    assert branch["branch_origin"]["event_id"] == "event-2"
+
+    branch_update = {**branch["draft"], "notes": "alternate outcome", "expected_version": 1}
+    updated = client.put(f"/api/games/{branch['id']}", json=branch_update)
+    assert updated.status_code == 200
+    assert updated.json()["timeline"][:3] == branch["timeline"]
+    assert client.get(source_url).json() == reloaded
+
+
+def test_saved_history_cannot_be_rewritten_or_removed(client: TestClient) -> None:
+    payload = draft_payload()
+    record = client.post("/api/games", json=payload).json()
+    url = f"/api/games/{record['id']}"
+    history = record["timeline"]
+    payload["phase"] = "day"
+    event = timeline_event(payload, "event-2")
+    updated = client.put(
+        url, json={**payload, "expected_version": 1, "timeline": [*history, event]}
+    )
+    assert updated.status_code == 200
+    truncated = client.put(url, json={**payload, "expected_version": 2, "timeline": [event]})
+    assert truncated.status_code == 422
+    history[0]["summary"] = "rewritten"
+    rewritten = client.put(
+        url, json={**payload, "expected_version": 2, "timeline": [*history, event]}
+    )
+    assert rewritten.status_code == 422
+    stale = client.put(url, json={**payload, "expected_version": 1})
+    assert stale.status_code == 409
+    assert client.get(url).json()["version"] == 2
+
+
+@pytest.mark.parametrize("bad_history", ["empty", "duplicates", "mismatch", "wrong_role"])
+def test_invalid_history_is_rejected(client: TestClient, bad_history: str) -> None:
+    payload = draft_payload()
+    event = timeline_event(payload)
+    timeline = [event]
+    if bad_history == "empty":
+        timeline = []
+    elif bad_history == "duplicates":
+        timeline = [event, event]
+    elif bad_history == "mismatch":
+        event["snapshot"]["phase"] = "night"
+    else:
+        event["snapshot"]["seats"][0]["role_id"] = "fanggu"
+        timeline = [event, timeline_event(payload, "event-2")]
+    assert client.post("/api/games", json={**payload, "timeline": timeline}).status_code == 422
+
+
+def test_history_can_replay_incomplete_setup_but_branch_requires_valid_composition(
+    client: TestClient,
+) -> None:
+    from copy import deepcopy
+
+    payload = draft_payload()
+    incomplete = deepcopy(payload)
+    incomplete["name"] = ""
+    incomplete["composition"]["townsfolk"] = 4
+    timeline = [timeline_event(incomplete), timeline_event(payload, "event-2")]
+    created = client.post("/api/games", json={**payload, "timeline": timeline})
+    assert created.status_code == 201
+    url = f"/api/games/{created.json()['id']}/branch"
+    assert client.post(url, json={"event_id": "event-1", "expected_version": 1}).status_code == 422
+    assert client.post(url, json={"event_id": "missing", "expected_version": 1}).status_code == 404
+    assert client.post(url, json={"event_id": "event-2", "expected_version": 9}).status_code == 409
+
+
+def test_legacy_database_migrates_without_inventing_history(tmp_path: Path) -> None:
+    import json
+    import sqlite3
+
+    from backend.app.database import GameRepository
+
+    path = tmp_path / "legacy.sqlite3"
+    with sqlite3.connect(path) as connection:
+        connection.execute("""CREATE TABLE games (
+            id TEXT PRIMARY KEY, version INTEGER, name TEXT, script_id TEXT,
+            player_count INTEGER, payload TEXT, created_at TEXT, updated_at TEXT
+        )""")
+        connection.execute(
+            "INSERT INTO games VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "old-game",
+                3,
+                "测试局",
+                "script-002",
+                7,
+                json.dumps(draft_payload()),
+                "2026-09-15T12:00:00Z",
+                "2026-09-16T12:00:00Z",
+            ),
+        )
+    repository = GameRepository(path)
+    repository.initialize()
+    repository.initialize()
+    record = repository.get("old-game")
+    assert record.version == 3
+    assert len(record.timeline) == 1
+    assert "此前过程未记录" in record.timeline[0].summary
+    assert record.timeline[0].snapshot.model_dump() == record.draft.model_dump()
+    updated = repository.update(record.id, record.draft, record.version, record.timeline)
+    assert updated.timeline == record.timeline
+    assert GameRepository(path).get("old-game").timeline == record.timeline
+
+
+def test_temporary_empty_marker_label_does_not_block_later_history_saves(
+    client: TestClient,
+) -> None:
+    payload = draft_payload()
+    payload["seats"][0]["markers"] = [{"id": "marker-1", "type": "custom", "label": ""}]
+    incomplete = timeline_event(payload)
+    assert client.post("/api/games", json=payload).status_code == 422
+    payload["seats"][0]["markers"][0]["label"] = "修正后的提醒"
+    complete = timeline_event(payload, "event-2")
+    response = client.post("/api/games", json={**payload, "timeline": [incomplete, complete]})
+    assert response.status_code == 201
+    game_id = response.json()["id"]
+    reloaded = client.get(f"/api/games/{game_id}").json()
+    assert reloaded["timeline"][0]["snapshot"]["seats"][0]["markers"][0]["label"] == ""
+    assert reloaded["draft"]["seats"][0]["markers"][0]["label"] == "修正后的提醒"
+    assert (
+        client.post(
+            f"/api/games/{game_id}/branch",
+            json={
+                "event_id": "event-1",
+                "expected_version": 1,
+            },
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"/api/games/{game_id}/branch",
+            json={
+                "event_id": "event-2",
+                "expected_version": 1,
+            },
+        ).status_code
+        == 201
+    )

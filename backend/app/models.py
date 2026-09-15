@@ -60,7 +60,7 @@ class MarkerType(str, Enum):
 class Marker(StrictModel):
     id: str = Field(min_length=1, max_length=80)
     type: MarkerType
-    label: str = Field(min_length=1, max_length=80)
+    label: str = Field(max_length=80)
     source_role_id: Optional[str] = Field(default=None, max_length=80)
     expires: Optional[str] = Field(default=None, max_length=120)
     note: str = Field(default="", max_length=500)
@@ -90,9 +90,9 @@ class Composition(StrictModel):
         return self.townsfolk + self.outsider + self.minion + self.demon + self.traveller
 
 
-class GameDraft(StrictModel):
+class GameSnapshot(StrictModel):
     schema_version: Literal[1] = 1
-    name: str = Field(default="未命名局面", min_length=1, max_length=120)
+    name: str = Field(default="未命名局面", max_length=120)
     script_id: str = Field(pattern=r"^script-\d{3}$")
     player_count: int = Field(ge=5, le=20)
     composition: Composition
@@ -102,7 +102,7 @@ class GameDraft(StrictModel):
     notes: str = Field(default="", max_length=5000)
 
     @model_validator(mode="after")
-    def validate_seats_and_composition(self) -> "GameDraft":
+    def validate_seats(self) -> "GameSnapshot":
         if len(self.seats) != self.player_count:
             raise ValueError("seats length must equal player_count")
         positions = sorted(seat.position for seat in self.seats)
@@ -111,16 +111,59 @@ class GameDraft(StrictModel):
         ids = [seat.id for seat in self.seats]
         if len(ids) != len(set(ids)):
             raise ValueError("seat ids must be unique")
+        return self
+
+
+class GameDraft(GameSnapshot):
+    name: str = Field(default="未命名局面", min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_complete_draft(self) -> "GameDraft":
         if self.composition.total != self.player_count:
             raise ValueError("composition total must equal player_count")
+        if any(not marker.label for seat in self.seats for marker in seat.markers):
+            raise ValueError("marker labels must not be empty")
         return self
+
+
+class TimelineEntry(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    recorded_at: datetime
+    kind: Literal["initial", "change", "note", "branch"] = "change"
+    summary: str = Field(min_length=1, max_length=500)
+    note: str = Field(default="", max_length=2000)
+    snapshot: GameSnapshot
+
+
+class BranchOrigin(StrictModel):
+    game_id: str
+    game_name: str
+    event_id: str
+
+
+class BranchRequest(StrictModel):
+    event_id: str = Field(min_length=1, max_length=80)
+    expected_version: int = Field(ge=1)
 
 
 class GameWrite(GameDraft):
     expected_version: Optional[int] = Field(default=None, ge=1)
+    timeline: Optional[List[TimelineEntry]] = Field(default=None, max_length=20000)
 
     def as_draft(self) -> GameDraft:
-        return GameDraft.model_validate(self.model_dump(exclude={"expected_version"}))
+        return GameDraft.model_validate(self.model_dump(exclude={"expected_version", "timeline"}))
+
+    @model_validator(mode="after")
+    def validate_timeline(self) -> "GameWrite":
+        if self.timeline is not None:
+            if not self.timeline:
+                raise ValueError("timeline must include at least one snapshot")
+            ids = [event.id for event in self.timeline]
+            if len(ids) != len(set(ids)):
+                raise ValueError("timeline event ids must be unique")
+            if self.timeline[-1].snapshot.model_dump() != self.as_draft().model_dump():
+                raise ValueError("last timeline snapshot must match the current draft")
+        return self
 
 
 class GameRecord(StrictModel):
@@ -129,6 +172,8 @@ class GameRecord(StrictModel):
     created_at: datetime
     updated_at: datetime
     draft: GameDraft
+    timeline: List[TimelineEntry]
+    branch_origin: Optional[BranchOrigin] = None
 
 
 class GameSummary(StrictModel):

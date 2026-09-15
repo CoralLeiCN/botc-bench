@@ -10,10 +10,11 @@ from fastapi.staticfiles import StaticFiles
 
 from .catalog import ScriptCatalog, ScriptNotFound
 from .config import Settings
-from .database import GameNotFound, GameRepository, VersionConflict
+from .database import EventNotFound, GameNotFound, GameRepository, TimelineConflict, VersionConflict
 from .models import (
-    GameDraft,
+    BranchRequest,
     GameRecord,
+    GameSnapshot,
     GameSummary,
     GameWrite,
     HarnessStatus,
@@ -56,7 +57,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
 
-    def validate_script_roles(draft: GameDraft) -> None:
+    def validate_script_roles(draft: GameSnapshot) -> None:
         try:
             script = catalog.get(draft.script_id)
         except ScriptNotFound as exc:
@@ -114,7 +115,9 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def create_game(payload: GameWrite) -> GameRecord:
         draft = payload.as_draft()
         validate_script_roles(draft)
-        return repository.create(draft)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
+        return repository.create(draft, payload.timeline)
 
     @app.get("/api/games/{game_id}", response_model=GameRecord)
     def get_game(game_id: str) -> GameRecord:
@@ -129,12 +132,30 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             raise HTTPException(status_code=422, detail="expected_version is required")
         draft = payload.as_draft()
         validate_script_roles(draft)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
-            return repository.update(game_id, draft, payload.expected_version)
+            return repository.update(game_id, draft, payload.expected_version, payload.timeline)
         except GameNotFound as exc:
             raise HTTPException(status_code=404, detail="game not found") from exc
         except VersionConflict as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except TimelineConflict as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/games/{game_id}/branch", response_model=GameRecord, status_code=201)
+    def branch_game(game_id: str, payload: BranchRequest) -> GameRecord:
+        try:
+            return repository.branch(game_id, payload.event_id, payload.expected_version)
+        except (GameNotFound, EventNotFound) as exc:
+            raise HTTPException(status_code=404, detail="game or timeline event not found") from exc
+        except VersionConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="该时刻仍有未完成的配置，请选择配置完整的记录创建分支",
+            ) from exc
 
     @app.delete("/api/games/{game_id}", status_code=status.HTTP_204_NO_CONTENT)
     def delete_game(game_id: str) -> Response:

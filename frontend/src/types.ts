@@ -89,6 +89,22 @@ export interface GameDraft {
 
 export interface GameWrite extends GameDraft {
   expected_version?: number;
+  timeline?: TimelineEntry[];
+}
+
+export interface TimelineEntry {
+  id: string;
+  recorded_at: string;
+  kind: "initial" | "change" | "note" | "branch";
+  summary: string;
+  note: string;
+  snapshot: GameDraft;
+}
+
+export interface BranchOrigin {
+  game_id: string;
+  game_name: string;
+  event_id: string;
 }
 
 export interface GameRecord {
@@ -97,6 +113,8 @@ export interface GameRecord {
   created_at: string;
   updated_at: string;
   draft: GameDraft;
+  timeline: TimelineEntry[];
+  branch_origin: BranchOrigin | null;
 }
 
 export interface GameSummary {

@@ -48,6 +48,7 @@
 - https://github.com/ThePandemoniumInstitute/botc-translations/blob/main/game/en.json
 - https://github.com/ThePandemoniumInstitute/botc-translations/blob/main/game/zh_Hans.json
 - https://quiz.bloodontheclocktower.com/trouble-brewing-easy
+- https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/nightsheet.json
 - https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json
 - https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json
 - https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json

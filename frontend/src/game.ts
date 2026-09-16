@@ -91,6 +91,10 @@ export function newSeat(position: number): Seat {
     position,
     player_name: `玩家 ${position}`,
     role_id: null,
+    shown_role_id: null,
+    shown_alignment: "unknown",
+    public_claim: "",
+    private_information: "",
     alive: true,
     dead_vote_available: true,
     alignment: "unknown",
@@ -111,6 +115,7 @@ export function createDraft(script: Script, playerCount = 7): GameDraft {
     day_number: 0,
     notes: "",
     nominations: [],
+    public_information: "",
   };
 }
 
@@ -176,6 +181,12 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
       issues.push({ level: "error", message: `${seat.player_name} 的角色不属于当前剧本` });
     }
     if (seat.role_id) duplicates.set(seat.role_id, (duplicates.get(seat.role_id) ?? 0) + 1);
+    if (seat.shown_role_id && !roleById.has(seat.shown_role_id)) {
+      issues.push({ level: "error", message: `${seat.player_name} 的展示角色不属于当前剧本` });
+    }
+    if (seat.role_id === "drunk" && roleById.get(seat.shown_role_id ?? "")?.team !== "townsfolk") {
+      issues.push({ level: "warning", message: `${seat.player_name} 的酒鬼身份需要另行设置展示的镇民角色` });
+    }
   }
   for (const [roleId, count] of duplicates) {
     if (count > 1) {
@@ -219,6 +230,10 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
 export function hasSeatData(seat: Seat): boolean {
   return Boolean(
     seat.role_id ||
+      seat.shown_role_id ||
+      seat.shown_alignment !== "unknown" ||
+      seat.public_claim ||
+      seat.private_information ||
       seat.markers.length ||
       seat.notes ||
       !seat.alive ||

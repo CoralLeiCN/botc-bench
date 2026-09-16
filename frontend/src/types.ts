@@ -90,6 +90,10 @@ export interface Seat {
   position: number;
   player_name: string;
   role_id: string | null;
+  shown_role_id: string | null;
+  shown_alignment: Alignment;
+  public_claim: string;
+  private_information: string;
   alive: boolean;
   dead_vote_available: boolean;
   alignment: Alignment;
@@ -118,6 +122,36 @@ export interface GameDraft {
   notes: string;
   nominations: Nomination[];
   night_checklist?: NightChecklist | null;
+  public_information: string;
+}
+
+export interface PlayerView {
+  script_id: string;
+  player_count: number;
+  phase: GamePhase;
+  day_number: number;
+  seats: Array<Pick<Seat, "id" | "position" | "player_name" | "alive" | "public_claim">>;
+  public_information: string;
+  you: {
+    seat_id: string;
+    shown_role_id: string | null;
+    shown_alignment: Alignment;
+    private_information: string;
+  };
+}
+
+export interface ReasonRequest {
+  game: GameDraft;
+  timeline?: TimelineEntry[];
+  question: string;
+  selected_seat_id: string | null;
+  perspective: "storyteller" | "player";
+}
+
+export interface ReasonPreview {
+  prompt: string;
+  prompt_sha256: string;
+  player_view: PlayerView | null;
 }
 
 export interface PlayerRef {

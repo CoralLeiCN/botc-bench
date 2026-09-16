@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpenText,
   CircleDot,
+  Eye,
   Plus,
   Skull,
   Trash2,
@@ -19,7 +20,8 @@ interface InspectorProps {
   seat: Seat | null;
   onSeatChange: (seat: Seat) => void;
   onMoveSeat: (direction: -1 | 1) => void;
-  onGameMetaChange: (patch: Partial<Pick<GameDraft, "phase" | "day_number" | "notes">>) => void;
+  onGameMetaChange: (patch: Partial<Pick<GameDraft, "phase" | "day_number" | "notes" | "public_information">>) => void;
+  onViewAsPlayer: (seatId: string) => void;
 }
 
 const teams: Team[] = ["townsfolk", "outsider", "minion", "demon", "traveller"];
@@ -40,6 +42,7 @@ export function Inspector({
   onSeatChange,
   onMoveSeat,
   onGameMetaChange,
+  onViewAsPlayer,
 }: InspectorProps) {
   const [customMarker, setCustomMarker] = useState("");
   const availableRoles = allRoles(script);
@@ -90,6 +93,12 @@ export function Inspector({
         )}
       </div>
 
+      {seat && (
+        <button type="button" className="view-as-button" onClick={() => onViewAsPlayer(seat.id)}>
+          <Eye size={15} /> 以此玩家视角查看
+        </button>
+      )}
+
       {!seat ? (
         <div className="empty-state">
           <CircleDot size={24} />
@@ -107,7 +116,7 @@ export function Inspector({
               />
             </label>
             <label>
-              <span>阵营</span>
+              <span>真实阵营</span>
               <select
                 value={seat.alignment}
                 onChange={(event) =>
@@ -157,6 +166,46 @@ export function Inspector({
               onChange={(event) => onSeatChange({ ...seat, dead_vote_available: event.target.checked })} />
             亡者票可用（剩余 {seat.dead_vote_available ? 1 : 0} 票）
           </label>}
+          <fieldset className="knowledge-fields">
+            <legend>玩家可见信息</legend>
+            <div className="field-row two-columns">
+              <label>
+                <span>展示角色</span>
+                <select
+                  value={seat.shown_role_id ?? ""}
+                  onChange={(event) => onSeatChange({ ...seat, shown_role_id: event.target.value || null })}
+                >
+                  <option value="">未告知 / 未记录</option>
+                  {availableRoles.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name.zh_hans} · {item.name.en}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>告知阵营</span>
+                <select value={seat.shown_alignment} onChange={(event) =>
+                  onSeatChange({ ...seat, shown_alignment: event.target.value as Seat["shown_alignment"] })
+                }>
+                  <option value="unknown">未告知 / 未记录</option>
+                  <option value="good">善良</option>
+                  <option value="evil">邪恶</option>
+                </select>
+              </label>
+            </div>
+            <p className="field-hint">单独记录玩家收到的身份；真实角色变更不会自动改写展示角色。</p>
+            <label className="notes-field">
+              <span>公开声明 · 所有玩家可见</span>
+              <textarea rows={2} maxLength={2000} value={seat.public_claim}
+                placeholder="如：我声称是共情者，昨晚得知 0。"
+                onChange={(event) => onSeatChange({ ...seat, public_claim: event.target.value })} />
+            </label>
+            <label className="notes-field">
+              <span>私人信息 · 仅此玩家可见</span>
+              <textarea rows={3} maxLength={5000} value={seat.private_information}
+                placeholder="逐条记录此玩家实际收到的信息，如：首夜得知 0。包括获知的队友或私聊原话。"
+                onChange={(event) => onSeatChange({ ...seat, private_information: event.target.value })} />
+            </label>
+          </fieldset>
 
           {role && (
             <article className={`ability-card ${role.team}`}>
@@ -282,13 +331,13 @@ export function Inspector({
           </fieldset>
 
           <label className="notes-field">
-            <span>玩家备注</span>
+            <span>说书人备注 · 对玩家隐藏</span>
             <textarea
               value={seat.notes}
               onChange={(event) => onSeatChange({ ...seat, notes: event.target.value })}
               rows={2}
               maxLength={2000}
-              placeholder="私聊、已知信息、说书人提醒…"
+              placeholder="隐藏状态、结算依据、说书人提醒…"
             />
           </label>
         </fieldset>
@@ -325,7 +374,13 @@ export function Inspector({
             </label>
           </div>
           <label className="notes-field">
-            <span>全局备注</span>
+            <span>公开信息 · 所有玩家可见</span>
+            <textarea rows={3} maxLength={5000} value={game.public_information}
+              placeholder="公告、提名、投票、公开发言等。"
+              onChange={(event) => onGameMetaChange({ public_information: event.target.value })} />
+          </label>
+          <label className="notes-field">
+            <span>全局备注 · 对玩家隐藏</span>
             <textarea
               rows={2}
               maxLength={5000}

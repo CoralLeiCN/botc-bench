@@ -110,7 +110,9 @@ def test_reasoning_receives_only_supplied_history_and_rejects_mismatched_endpoin
     event = timeline_event(payload, "vote-evidence", "change")
     captured = []
 
-    async def reason(game, question, selected_seat_id, timeline=None):
+    async def reason(
+        game, question, selected_seat_id, perspective, expected_prompt_sha256, timeline=None,
+    ):
         captured.extend(timeline or [])
         return ReasonResponse(answer="Evidence received", duration_ms=0)
 
@@ -141,12 +143,66 @@ def test_prompt_contains_exact_vote_changes_and_no_unseen_future(client):
     assert evidence[1]["changes"] == [{
         "path": ["nominations", 0, "votes", 0, "choice"], "before": "pending", "after": "yes",
     }]
-    prompt = harness.build_prompt(GameDraft.model_validate(voted), "Analyze", None, timeline)
+    prompt = harness.build_prompt(
+        GameDraft.model_validate(voted), "Analyze", None, timeline=timeline,
+    )
     assert "after-vote" in prompt
     assert "<timeline-evidence-json>" in prompt
     assert "dead_vote" in prompt
     assert "不可信数据" in prompt
     earlier_prompt = harness.build_prompt(
-        GameDraft.model_validate(initial), "Analyze", None, timeline[:1],
+        GameDraft.model_validate(initial), "Analyze", None, timeline=timeline[:1],
     )
     assert "after-vote" not in earlier_prompt
+
+
+@pytest.mark.parametrize("endpoint", ["/api/reason/preview", "/api/reason"])
+def test_analysis_endpoints_reject_history_that_does_not_match_current_state(client, endpoint):
+    payload = voting_payload()
+    event = timeline_event(payload, "past-vote")
+    event["snapshot"]["notes"] = "different state"
+    response = client.post(endpoint, json={
+        "game": payload, "question": "Who voted?", "timeline": [event],
+    })
+    assert response.status_code == 422
+
+
+def test_storyteller_preview_binds_timeline_and_rejects_changed_evidence_before_launch(client):
+    payload = voting_payload()
+    event = timeline_event(payload, "vote-evidence")
+    request = {"game": payload, "question": "Who voted?", "timeline": [event]}
+    response = client.post("/api/reason/preview", json=request)
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert "vote-evidence" in preview["prompt"]
+    assert "<timeline-evidence-json>" in preview["prompt"]
+    request["timeline"][0]["note"] = "Changed evidence after preview"
+    changed = client.post("/api/reason/preview", json=request).json()
+    assert changed["prompt_sha256"] != preview["prompt_sha256"]
+    response = client.post("/api/reason", json={
+        **request, "expected_prompt_sha256": preview["prompt_sha256"],
+    })
+    # The disabled test harness must never launch when the preview is stale.
+    assert response.status_code == 409, response.text
+
+
+def test_player_preview_ignores_storyteller_timeline_and_ballots(client):
+    payload = voting_payload()
+    event = timeline_event(payload, "SECRET_EVENT_ID")
+    event["note"] = "SECRET_STORYTELLER_NOTE"
+    request = {
+        "game": payload, "question": "Who voted?",
+        "selected_seat_id": payload["seats"][0]["id"], "perspective": "player",
+    }
+    baseline = client.post("/api/reason/preview", json=request)
+    response = client.post("/api/reason/preview", json={**request, "timeline": [event]})
+    assert response.status_code == baseline.status_code == 200
+    assert response.json() == baseline.json()
+    prompt = response.json()["prompt"]
+    assert "SECRET" not in prompt
+    assert "<timeline-evidence-json>" not in prompt
+    assert "nomination-1" not in prompt
+    assert "dead_vote_available" not in prompt
+    payload["nominations"] = []
+    payload["seats"][-1]["dead_vote_available"] = False
+    assert client.post("/api/reason/preview", json=request).json() == baseline.json()

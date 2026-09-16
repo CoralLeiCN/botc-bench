@@ -18,11 +18,13 @@ from .models import (
     GameSummary,
     GameWrite,
     HarnessStatus,
+    ReasonPreview,
+    ReasonPreviewRequest,
     ReasonRequest,
     ReasonResponse,
     Script,
 )
-from .services.codex_harness import CodexHarness, HarnessFailed, HarnessUnavailable
+from .services.codex_harness import CodexHarness, HarnessFailed, HarnessUnavailable, PromptChanged
 
 
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
@@ -64,7 +66,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             raise HTTPException(status_code=422, detail="unknown script_id") from exc
         allowed = {role.id for role in [*script.roles, *script.travellers]}
         invalid_roles = sorted(
-            {seat.role_id for seat in draft.seats if seat.role_id and seat.role_id not in allowed}
+            {
+                role_id for seat in draft.seats
+                for role_id in (seat.role_id, seat.shown_role_id)
+                if role_id and role_id not in allowed
+            }
         )
         invalid_sources = sorted(
             {
@@ -169,6 +175,19 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def harness_status() -> HarnessStatus:
         return harness.status()
 
+    @app.post("/api/reason/preview", response_model=ReasonPreview)
+    def preview_reason(payload: ReasonPreviewRequest) -> ReasonPreview:
+        validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
+        try:
+            return harness.preview(
+                payload.game, payload.question, payload.selected_seat_id, payload.perspective,
+                timeline=payload.timeline,
+            )
+        except HarnessFailed as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
     @app.post("/api/reason", response_model=ReasonResponse)
     async def reason(payload: ReasonRequest) -> ReasonResponse:
         validate_script_roles(payload.game)
@@ -176,8 +195,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             validate_script_roles(event.snapshot)
         try:
             return await harness.reason(
-                payload.game, payload.question, payload.selected_seat_id, payload.timeline
+                payload.game, payload.question, payload.selected_seat_id,
+                payload.perspective, payload.expected_prompt_sha256,
+                timeline=payload.timeline,
             )
+        except PromptChanged as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except HarnessUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except HarnessFailed as exc:

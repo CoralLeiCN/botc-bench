@@ -1,9 +1,10 @@
-import { AlertTriangle, LoaderCircle, X } from "lucide-react";
+import { AlertTriangle, Eye, LoaderCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiFailure } from "./api";
 import { CodexPanel } from "./components/CodexPanel";
 import { GrimoireBoard } from "./components/GrimoireBoard";
 import { Inspector } from "./components/Inspector";
+import { PlayerView } from "./components/PlayerView";
 import { NightChecklist } from "./components/NightChecklist";
 import { RolePalette } from "./components/RolePalette";
 import { Timeline } from "./components/Timeline";
@@ -29,6 +30,8 @@ import type {
   GameRecord,
   GameSummary,
   HarnessStatus,
+  ReasonPreview,
+  ReasonRequest,
   ManualEventKind,
   Script,
   Seat,
@@ -58,6 +61,15 @@ export default function App() {
   const [record, setRecord] = useState<RecordState | null>(null);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [viewAsSeatId, setViewAsSeatId] = useState<string | null>(null);
+  const [question, setQuestion] = useState("");
+  const [previewRevision, setPreviewRevision] = useState(0);
+  const [previewRecord, setPreviewRecord] = useState<{
+    request: ReasonRequest; result: ReasonPreview; revision: number;
+  } | null>(null);
+  const [previewFailure, setPreviewFailure] = useState<{
+    request: ReasonRequest; message: string;
+  } | null>(null);
   const [panelTab, setPanelTab] = useState<"night" | "inspector" | "codex">("night");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,9 +125,55 @@ export default function App() {
     setCodexError(null);
   }, []);
 
+  const reasonRequest = useMemo<ReasonRequest | null>(() => displayedGame ? {
+    game: displayedGame,
+    question: question.trim(),
+    selected_seat_id: viewAsSeatId ?? selectedSeatId,
+    perspective: viewAsSeatId ? "player" : "storyteller",
+    timeline: viewAsSeatId ? undefined : timeline.slice(
+      0, replayIndex === null ? timeline.length : replayIndex + 1,
+    ),
+  } : null, [displayedGame, question, selectedSeatId, viewAsSeatId, timeline, replayIndex]);
+  const preview = previewRecord?.request === reasonRequest && previewRecord.revision === previewRevision
+    ? previewRecord.result : null;
+  const previewError = previewFailure?.request === reasonRequest ? previewFailure.message : null;
+  // Keep the same safe projection visible while only the question is being edited.
+  const playerView = previewRecord?.request.game === displayedGame &&
+    previewRecord.request.perspective === "player" &&
+    previewRecord.request.selected_seat_id === viewAsSeatId
+    ? previewRecord.result.player_view : null;
+
+  useEffect(() => {
+    if (!reasonRequest) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void api.previewReason(reasonRequest, controller.signal).then((result) => {
+        if (!controller.signal.aborted) {
+          setPreviewRecord({ request: reasonRequest, result, revision: previewRevision });
+          setPreviewFailure(null);
+        }
+      }).catch((error: unknown) => {
+        if (!controller.signal.aborted) setPreviewFailure({ request: reasonRequest, message: readError(error) });
+      });
+    }, 200);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [reasonRequest, previewRevision]);
+
+  const changePerspective = (seatId: string | null) => {
+    invalidateCodexContext();
+    setQuestion("");
+    setSelectedRoleId(null);
+    setViewAsSeatId(seatId);
+  };
+
+  const changeQuestion = (value: string) => {
+    invalidateCodexContext();
+    setQuestion(value);
+  };
+
   const updateGame = useCallback(
     (updater: (current: GameDraft) => GameDraft) => {
-      if (replaying || branchingRef.current) return;
+      if (replaying || viewAsSeatId || branchingRef.current) return;
       if (game) {
         const error = votingEditError(game, updater(game));
         if (error) { setNotice(error); return; }
@@ -133,7 +191,7 @@ export default function App() {
       setDirty(true);
       setNotice(null);
     },
-    [game, invalidateCodexContext, replaying, scripts],
+    [game, invalidateCodexContext, replaying, scripts, viewAsSeatId],
   );
 
   const refreshSavedGames = useCallback(async () => {
@@ -219,14 +277,16 @@ export default function App() {
     const nextScript = scripts.find((item) => item.id === scriptId);
     if (!nextScript) return;
     const allowed = new Set(allRoles(nextScript).map((role) => role.id));
-    const affected = game.seats.filter((seat) => seat.role_id && !allowed.has(seat.role_id));
+    const affected = game.seats.filter((seat) =>
+      (seat.role_id && !allowed.has(seat.role_id)) || (seat.shown_role_id && !allowed.has(seat.shown_role_id)),
+    );
     const affectedMarkers = game.seats.flatMap((seat) =>
       seat.markers.filter((item) => item.source_role_id && !allowed.has(item.source_role_id)),
     );
     if (
       (affected.length > 0 || affectedMarkers.length > 0) &&
       !window.confirm(
-        `切换剧本会清除 ${affected.length} 个不兼容角色和 ${affectedMarkers.length} 个角色专属标记；玩家名、座次及通用标记会保留。继续吗？`,
+        `切换剧本会清除 ${affected.length} 个座位的不兼容真实或展示角色和 ${affectedMarkers.length} 个角色专属标记；玩家名、声明、信息及通用标记会保留。继续吗？`,
       )
     ) {
       return;
@@ -235,6 +295,7 @@ export default function App() {
       const seats = current.seats.map((seat) => ({
         ...seat,
         role_id: seat.role_id && allowed.has(seat.role_id) ? seat.role_id : null,
+        shown_role_id: seat.shown_role_id && allowed.has(seat.shown_role_id) ? seat.shown_role_id : null,
         markers: seat.markers.filter(
           (item) => !item.source_role_id || allowed.has(item.source_role_id),
         ),
@@ -429,21 +490,18 @@ export default function App() {
     }
   };
 
-  const askCodex = async (question: string) => {
-    if (!displayedGame || codexBusy) return;
+  const askCodex = async () => {
+    if (!reasonRequest || !question.trim() || !preview || codexBusy) return;
     const requestContext = codexContextEpochRef.current;
     setCodexBusy(true);
     setCodexError(null);
     try {
-      const result = await api.reason(displayedGame, question, selectedSeatId,
-        timeline.slice(0, replayIndex === null ? timeline.length : replayIndex + 1));
+      const result = await api.reason(reasonRequest, preview.prompt_sha256);
       if (codexContextEpochRef.current === requestContext) {
         setCodexAnswer(result.answer);
-      } else {
-        setCodexError("推理期间局面或选中玩家已变化，本次旧上下文结果未显示。请重新触发。 ");
       }
     } catch (error) {
-      setCodexError(readError(error));
+      if (codexContextEpochRef.current === requestContext) setCodexError(readError(error));
     } finally {
       setCodexBusy(false);
     }
@@ -513,6 +571,49 @@ export default function App() {
       <div className="loading-screen">
         <LoaderCircle size={24} className="spin" />
         正在打开魔典…
+      </div>
+    );
+  }
+
+  const codexPanel = (
+    <CodexPanel
+      script={script}
+      selectedSeat={viewAsSeatId ? playerView?.seats.find((seat) => seat.id === viewAsSeatId) ?? null : selectedSeat}
+      playerMode={Boolean(viewAsSeatId)}
+      question={question}
+      onQuestionChange={changeQuestion}
+      preview={preview}
+      previewError={previewError}
+      onRefreshPreview={() => { setPreviewRevision((value) => value + 1); setPreviewFailure(null); }}
+      status={harnessStatus}
+      answer={codexAnswer}
+      busy={codexBusy}
+      error={codexError}
+      onAsk={askCodex}
+      onOpenNight={viewAsSeatId ? undefined : () => setPanelTab("night")}
+    />
+  );
+
+  if (viewAsSeatId) {
+    return (
+      <div className="app-shell player-mode">
+        <header className="perspective-toolbar panel-shell">
+          <Eye size={20} />
+          <div><strong>玩家视角</strong><small>{replaying ? "当前选定的历史时刻" : "当前局面"} · 只读预览</small></div>
+          <label>
+            <span>查看玩家</span>
+            <select aria-label="查看玩家" value={viewAsSeatId} onChange={(event) => changePerspective(event.target.value)}>
+              {displayedGame.seats.map((seat) => <option key={seat.id} value={seat.id}>{seat.position} 号 · {seat.player_name}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => changePerspective(null)}>返回说书人视角</button>
+        </header>
+        <div className="player-workspace">
+          {playerView ? <PlayerView view={playerView} script={script} /> : (
+            <main className="player-view panel-shell" role="status">{previewError ?? "正在生成玩家视角…"}</main>
+          )}
+          <aside className="player-agent panel-shell">{codexPanel}</aside>
+        </div>
       </div>
     );
   }
@@ -616,22 +717,14 @@ export default function App() {
               seat={selectedSeat}
               onSeatChange={changeSeat}
               onMoveSeat={moveSeat}
+              onViewAsPlayer={changePerspective}
               onGameMetaChange={(patch) =>
                 updateGame((current) => ({ ...current, ...patch }))
               }
             />
           </div>
           <div className="right-panel-content" hidden={panelTab !== "codex"}>
-            <CodexPanel
-              script={script}
-              selectedSeat={selectedSeat}
-              status={harnessStatus}
-              answer={codexAnswer}
-              busy={codexBusy}
-              error={codexError}
-              onAsk={askCodex}
-              onOpenNight={() => setPanelTab("night")}
-            />
+            {codexPanel}
           </div>
         </aside>
       </div>

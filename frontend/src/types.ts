@@ -30,6 +30,35 @@ export interface ScriptSources {
   english_roles: string;
   english_locale: string;
   zh_hans: string;
+  nightsheet?: string | null;
+}
+
+export interface NightInstruction {
+  id: string;
+  name: LocalizedText;
+  reminder: LocalizedText;
+}
+
+export type NightPhase = "first_night" | "night";
+
+export interface NightStep {
+  id: string;
+  instruction_id: string | null;
+  seat_id: string | null;
+  title: string;
+  status: "pending" | "completed" | "skipped";
+  choice: string;
+  information: string;
+  decision: string;
+}
+
+export interface NightChecklist {
+  id: string;
+  script_id: string;
+  phase: NightPhase;
+  day_number: number;
+  steps: NightStep[];
+  reviewed_effects: string[];
 }
 
 export interface Script {
@@ -44,6 +73,7 @@ export interface Script {
   qa_path: string;
   reference_path: string;
   sources: ScriptSources;
+  night_order?: Record<NightPhase, NightInstruction[]>;
 }
 
 export interface Marker {
@@ -85,6 +115,7 @@ export interface GameDraft {
   phase: GamePhase;
   day_number: number;
   notes: string;
+  night_checklist?: NightChecklist | null;
 }
 
 export interface GameWrite extends GameDraft {

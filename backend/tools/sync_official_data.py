@@ -25,6 +25,10 @@ EN_URL = (
     "https://raw.githubusercontent.com/ThePandemoniumInstitute/"
     "botc-translations/main/game/en.json"
 )
+NIGHTSHEET_URL = (
+    "https://raw.githubusercontent.com/ThePandemoniumInstitute/"
+    "botc-release/main/resources/data/nightsheet.json"
+)
 SOURCE_PAGES = {
     "tb": "https://wiki.bloodontheclocktower.com/Trouble_Brewing",
     "bmr": "https://wiki.bloodontheclocktower.com/Bad_Moon_Rising",
@@ -66,7 +70,8 @@ def bracket_effect(text: str) -> Optional[str]:
 
 
 def build_scripts(
-    roles: Iterable[Dict[str, Any]], zh: Dict[str, Any], en: Dict[str, Any]
+    roles: Iterable[Dict[str, Any]], zh: Dict[str, Any], en: Dict[str, Any],
+    nightsheet: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     official_teams = set(TEAM_ORDER)
     result: List[Dict[str, Any]] = []
@@ -101,6 +106,32 @@ def build_scripts(
             )
 
         localized_roles.sort(key=lambda item: TEAM_ORDER[item["team"]])
+        role_by_id = {role["id"]: role for role in edition_roles}
+        night_order = {}
+        for phase, source_key, reminder_key in [
+            ("first_night", "firstNight", "first"), ("night", "otherNight", "other")
+        ]:
+            instructions = []
+            for role_id in nightsheet[source_key]:
+                if role_id not in role_by_id and role_id not in {
+                    "dusk", "dawn", "minioninfo", "demoninfo"
+                }:
+                    continue
+                source = role_by_id.get(role_id, {})
+                english = en["roles"].get(role_id, {})
+                chinese = translations.get(role_id, {})
+                instructions.append({
+                    "id": role_id,
+                    "name": {
+                        "en": source.get("name", english.get("name")),
+                        "zh_hans": chinese.get("name"),
+                    },
+                    "reminder": {
+                        "en": source.get(source_key + "Reminder", english.get(reminder_key)),
+                        "zh_hans": chinese.get(reminder_key),
+                    },
+                })
+            night_order[phase] = instructions
         result.append(
             {
                 "id": meta["id"],
@@ -116,11 +147,13 @@ def build_scripts(
                 "travellers": [role for role in localized_roles if role["team"] == "traveller"],
                 "qa_path": f"scripts/{meta['id']}/OFFICIAL_QA.md",
                 "reference_path": f"scripts/{meta['id']}/reference/README.md",
+                "night_order": night_order,
                 "sources": {
                     "edition": SOURCE_PAGES[edition],
                     "english_roles": ROLES_URL,
                     "english_locale": EN_URL,
                     "zh_hans": ZH_HANS_URL,
+                    "nightsheet": NIGHTSHEET_URL,
                 },
             }
         )
@@ -161,6 +194,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--roles-file", type=Path)
     parser.add_argument("--translation-file", type=Path)
     parser.add_argument("--english-file", type=Path)
+    parser.add_argument("--nightsheet-file", type=Path)
     parser.add_argument("--retrieved-at", default=date.today().isoformat())
     return parser.parse_args()
 
@@ -170,7 +204,8 @@ def main() -> None:
     roles, roles_sha256 = load_json(args.roles_file, ROLES_URL)
     translations, translations_sha256 = load_json(args.translation_file, ZH_HANS_URL)
     english, english_sha256 = load_json(args.english_file, EN_URL)
-    scripts = build_scripts(roles, translations, english)
+    nightsheet, nightsheet_sha256 = load_json(args.nightsheet_file, NIGHTSHEET_URL)
+    scripts = build_scripts(roles, translations, english, nightsheet)
     payload = {
         "schema_version": 1,
         "retrieved_at": args.retrieved_at,
@@ -178,11 +213,13 @@ def main() -> None:
             "english_roles": ROLES_URL,
             "english_locale": EN_URL,
             "zh_hans": ZH_HANS_URL,
+            "nightsheet": NIGHTSHEET_URL,
         },
         "source_sha256": {
             "english_roles": roles_sha256,
             "english_locale": english_sha256,
             "zh_hans": translations_sha256,
+            "nightsheet": nightsheet_sha256,
         },
         "scripts": scripts,
     }

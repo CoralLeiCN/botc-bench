@@ -4,6 +4,7 @@ import { api, ApiFailure } from "./api";
 import { CodexPanel } from "./components/CodexPanel";
 import { GrimoireBoard } from "./components/GrimoireBoard";
 import { Inspector } from "./components/Inspector";
+import { NightChecklist } from "./components/NightChecklist";
 import { RolePalette } from "./components/RolePalette";
 import { Timeline } from "./components/Timeline";
 import { Toolbar } from "./components/Toolbar";
@@ -16,6 +17,7 @@ import {
   suggestedComposition,
   validateDraft,
 } from "./game";
+import { nextNightStep, nightStepSeats } from "./night";
 import { createEntry, recordChange } from "./timeline";
 import type {
   BranchOrigin,
@@ -52,6 +54,7 @@ export default function App() {
   const [record, setRecord] = useState<RecordState | null>(null);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [panelTab, setPanelTab] = useState<"night" | "inspector" | "codex">("night");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingGame, setLoadingGame] = useState(false);
@@ -277,6 +280,7 @@ export default function App() {
   const chooseSeat = (seatId: string) => {
     if (seatId !== selectedSeatId) invalidateCodexContext();
     setSelectedSeatId(seatId);
+    setPanelTab("inspector");
     if (replaying || branchingRef.current || !selectedRoleId || !script) return;
     const selectedRole = allRoles(script).find((role) => role.id === selectedRoleId);
     updateGame((current) => {
@@ -559,31 +563,64 @@ export default function App() {
           selectedSeatId={selectedSeatId}
           selectedRoleId={replaying ? null : selectedRoleId}
           replaying={replaying}
+          nextNightSeatIds={nightStepSeats(displayedGame, script, nextNightStep(displayedGame))}
           issues={issues}
           onSeatClick={chooseSeat}
         />
 
         <aside className="right-panel panel-shell">
-          <Inspector
-            readOnly={replaying || branching}
-            game={displayedGame}
-            script={script}
-            seat={selectedSeat}
-            onSeatChange={changeSeat}
-            onMoveSeat={moveSeat}
-            onGameMetaChange={(patch) =>
-              updateGame((current) => ({ ...current, ...patch }))
-            }
-          />
-          <CodexPanel
-            script={script}
-            selectedSeat={selectedSeat}
-            status={harnessStatus}
-            answer={codexAnswer}
-            busy={codexBusy}
-            error={codexError}
-            onAsk={askCodex}
-          />
+          <nav className="right-panel-tabs" aria-label="说书人工具">
+            {([["night", "今晚清单"], ["inspector", "玩家检查器"], ["codex", "Codex 辅助"]] as const).map(([tab, label]) => (
+              <button
+                key={tab}
+                type="button"
+                aria-pressed={panelTab === tab}
+                className={panelTab === tab ? "active" : ""}
+                onClick={() => setPanelTab(tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="right-panel-content" hidden={panelTab !== "night"}>
+            <NightChecklist
+              key={`${documentEpochRef.current}-${displayedGame.night_checklist?.id ?? "new"}`}
+              game={displayedGame}
+              script={script}
+              readOnly={replaying || branching}
+              onUpdate={updateGame}
+              onFocusSeat={(id) => {
+                setSelectedRoleId(null);
+                setSelectedSeatId(id);
+                invalidateCodexContext();
+              }}
+            />
+          </div>
+          <div className="right-panel-content" hidden={panelTab !== "inspector"}>
+            <Inspector
+              readOnly={replaying || branching}
+              game={displayedGame}
+              script={script}
+              seat={selectedSeat}
+              onSeatChange={changeSeat}
+              onMoveSeat={moveSeat}
+              onGameMetaChange={(patch) =>
+                updateGame((current) => ({ ...current, ...patch }))
+              }
+            />
+          </div>
+          <div className="right-panel-content" hidden={panelTab !== "codex"}>
+            <CodexPanel
+              script={script}
+              selectedSeat={selectedSeat}
+              status={harnessStatus}
+              answer={codexAnswer}
+              busy={codexBusy}
+              error={codexError}
+              onAsk={askCodex}
+              onOpenNight={() => setPanelTab("night")}
+            />
+          </div>
         </aside>
       </div>
       <Timeline

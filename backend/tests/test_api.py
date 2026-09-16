@@ -316,3 +316,119 @@ def test_temporary_empty_marker_label_does_not_block_later_history_saves(
         ).status_code
         == 201
     )
+
+
+def night_checklist_payload():
+    return {
+        "id": "night-1",
+        "script_id": "script-002",
+        "phase": "first_night",
+        "day_number": 1,
+        "steps": [
+            {
+                "id": "empath-step",
+                "instruction_id": "empath",
+                "seat_id": "seat-1",
+                "title": "玩家 1 · 共情者",
+                "status": "pending",
+                "choice": "",
+                "information": "1",
+                "decision": "醉酒信息由说书人决定",
+            }
+        ],
+        "reviewed_effects": ['["seat-1", "effect-1", "黄昏"]'],
+    }
+
+
+def test_night_checklist_persists_and_branches_with_independent_progress(
+    client: TestClient,
+) -> None:
+    from copy import deepcopy
+
+    payload = draft_payload()
+    payload.update(phase="first_night", day_number=1, night_checklist=night_checklist_payload())
+    pending = timeline_event(payload, "night-pending")
+    record = client.post("/api/games", json={**payload, "timeline": [pending]}).json()
+    url = f"/api/games/{record['id']}"
+    payload["night_checklist"]["steps"][0]["status"] = "completed"
+    completed = timeline_event(payload, "night-completed", "change")
+    updated = client.put(
+        url, json={**payload, "timeline": [pending, completed], "expected_version": 1}
+    )
+    assert updated.status_code == 200
+    assert client.get(url).json()["draft"]["night_checklist"] == payload["night_checklist"]
+    branch = client.post(f"{url}/branch", json={"event_id": "night-pending", "expected_version": 2})
+    assert branch.status_code == 201
+    assert branch.json()["draft"]["night_checklist"]["steps"][0]["status"] == "pending"
+    assert branch.json()["draft"]["night_checklist"]["steps"][0]["information"] == "1"
+    assert client.get(url).json()["draft"]["night_checklist"]["steps"][0]["status"] == "completed"
+
+    # Earlier records cannot be rewritten, including their night information.
+    tampered = deepcopy(pending)
+    tampered["snapshot"]["night_checklist"]["steps"][0]["information"] = "2"
+    response = client.put(
+        url, json={**payload, "timeline": [tampered, completed], "expected_version": 2}
+    )
+    assert response.status_code == 422
+    assert "immutable" in response.json()["detail"]
+
+
+def test_old_games_accept_new_checklists_without_rewriting_old_snapshots(
+    client: TestClient,
+) -> None:
+    payload = draft_payload()
+    initial = timeline_event(payload)
+    record = client.post("/api/games", json={**payload, "timeline": [initial]}).json()
+    assert record["draft"]["night_checklist"] is None
+    payload.update(phase="first_night", day_number=1, night_checklist=night_checklist_payload())
+    latest = timeline_event(payload, "night-event", "change")
+    updated = client.put(
+        f"/api/games/{record['id']}",
+        json={
+            **payload,
+            "timeline": [initial, latest],
+            "expected_version": 1,
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["timeline"][0]["snapshot"]["night_checklist"] is None
+    assert updated.json()["draft"]["night_checklist"]["id"] == "night-1"
+
+
+@pytest.mark.parametrize(
+    "invalid", ["duplicate", "skip_without_reason", "invalid_status", "long_info"]
+)
+def test_invalid_night_checklists_are_rejected(client: TestClient, invalid: str) -> None:
+    payload = draft_payload()
+    checklist = night_checklist_payload()
+    step = checklist["steps"][0]
+    if invalid == "duplicate":
+        checklist["steps"].append(dict(step))
+    elif invalid == "skip_without_reason":
+        step.update(status="skipped", decision="  ")
+    elif invalid == "invalid_status":
+        step["status"] = "forgotten"
+    else:
+        step["information"] = "a" * 2001
+    payload["night_checklist"] = checklist
+    assert client.post("/api/games", json=payload).status_code == 422
+
+
+def test_catalog_provides_official_bilingual_night_instructions(client: TestClient) -> None:
+    scripts = client.get("/api/scripts").json()
+    tb = scripts[0]
+    first = {item["id"]: item for item in tb["night_order"]["first_night"]}
+    later = {item["id"]: item for item in tb["night_order"]["night"]}
+    assert "imp" not in first
+    assert "imp" in later
+    assert "washerwoman" in first
+    assert "washerwoman" not in later
+    assert first["poisoner"]["reminder"] == {
+        "en": "The Poisoner chooses a player. :reminder:",
+        "zh_hans": "投毒者选择一名玩家。:reminder:",
+    }
+    for script in scripts:
+        assert script["sources"]["nightsheet"].endswith("/nightsheet.json")
+        for phase in ("first_night", "night"):
+            assert script["night_order"][phase][0]["id"] == "dusk"
+            assert script["night_order"][phase][-1]["id"] == "dawn"

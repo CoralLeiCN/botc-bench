@@ -1,4 +1,5 @@
 import type { EventDetails, GameDraft, ManualEventKind, Script, TimelineEntry } from "./types";
+import { executionStanding, playerLabel, voteTotal } from "./voting.ts";
 
 export const EVENT_LABELS = {
   initial: "起点", change: "局面变化", note: "说书人记录", branch: "分支",
@@ -98,6 +99,28 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
   }
   if (!same(before.composition, after.composition)) changes.push("调整角色配比");
   if (before.notes !== after.notes) addText("notes", "更新全局备注");
+  for (const nomination of after.nominations) {
+    const previous = before.nominations.find((n) => n.id === nomination.id);
+    const label = `${playerLabel(nomination.nominator)} 提名 ${playerLabel(nomination.nominee)}`;
+    if (!previous) changes.push(`提名：${label}`);
+    else {
+      for (const vote of nomination.votes) {
+        const old = previous.votes.find((v) => v.player.id === vote.player.id);
+        if (!same(old, vote)) changes.push(`${playerLabel(vote.player)} → ${playerLabel(nomination.nominee)}：${
+          vote.choice === "yes" ? `投票（${vote.weight} 票${vote.dead_vote ? "，亡者票" : ""}）` :
+          vote.choice === "no" ? "未投票" : "改为未记录"
+        }`);
+      }
+      if (previous.status !== nomination.status) changes.push(nomination.status === "closed"
+        ? `投票结束：${label}，${voteTotal(nomination)} 票 / 门槛 ${Math.ceil(nomination.alive_count / 2)}`
+        : `取消投票：${label}`);
+    }
+  }
+  const oldStanding = executionStanding(before);
+  const standing = executionStanding(after);
+  if (!same(oldStanding, standing)) changes.push(standing.candidate
+    ? `待处决：${playerLabel(standing.candidate)}（${standing.high} 票）`
+    : standing.tied ? `最高票平票（${standing.high} 票），无人待处决` : "无人待处决");
   if (before.public_information !== after.public_information) addText("public_information", "更新公开信息");
 
   if (!same(before.night_checklist ?? null, after.night_checklist ?? null)) {
@@ -137,6 +160,7 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
     if (previous.public_claim !== seat.public_claim) addText(`${seat.id}.public_claim`, `${name}：更新公开声明`);
     if (previous.private_information !== seat.private_information) addText(`${seat.id}.private_information`, `${name}：更新私人信息`);
     if (previous.alive !== seat.alive) changes.push(`${name} ${seat.alive ? "复活" : "死亡"}`);
+    if (previous.dead_vote_available !== seat.dead_vote_available) changes.push(`${name}：亡者票${seat.dead_vote_available ? "恢复" : "已用"}`);
     if (previous.alignment !== seat.alignment) changes.push(`${name} 阵营：${alignments[previous.alignment]} → ${alignments[seat.alignment]}`);
     if (previous.notes !== seat.notes) addText(`${seat.id}.notes`, `${name}：更新玩家备注`);
     for (const marker of seat.markers) {

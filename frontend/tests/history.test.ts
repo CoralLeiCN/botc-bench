@@ -3,16 +3,17 @@ import test from "node:test";
 import { emptyHistory, rememberChange, stepHistory } from "../src/history.ts";
 import { createEntry, recordChange } from "../src/timeline.ts";
 import { recoverySlot, writeRecovery } from "../src/recovery.ts";
+import { finishNomination, recordVote } from "../src/voting.ts";
 import type { DraftRecovery, GameDraft } from "../src/types.ts";
 
 const game: GameDraft = {
   schema_version: 1, name: "Test", script_id: "script-002", player_count: 5,
   composition: { townsfolk: 3, outsider: 0, minion: 1, demon: 1, traveller: 0, manual: false },
-  public_information: "",
+  public_information: "", nominations: [],
   seats: Array.from({ length: 5 }, (_, i) => ({
     id: `seat-${i}`, position: i + 1, player_name: `Player ${i}`, role_id: null,
     shown_role_id: null, shown_alignment: "unknown", public_claim: "", private_information: "",
-    alive: true, alignment: "unknown", markers: [], notes: "",
+    alive: true, dead_vote_available: true, alignment: "unknown", markers: [], notes: "",
   })), phase: "setup", day_number: 0, notes: "",
 };
 const meta = (n: number) => ({ id: `event-${n}`, recorded_at: new Date(1700000000000 + n * 100).toISOString() });
@@ -54,6 +55,31 @@ test("undo supports structural changes and bounds history to 100 steps", () => {
   assert.equal(undone.snapshot.seats[0].alive, true);
   assert.equal(timeline.at(-1)!.snapshot.seats[0].alive, false);
   assert.equal(rememberChange(history, timeline, timeline), history);
+});
+
+test("undo and redo restore ballot status and dead vote tokens together", () => {
+  const ballotGame: GameDraft = structuredClone(game);
+  ballotGame.phase = "day";
+  ballotGame.day_number = 1;
+  ballotGame.seats[0].alive = false;
+  const players = ballotGame.seats.map(({ id, position, player_name }) => ({ id, position, player_name }));
+  ballotGame.nominations = [{
+    id: "ballot", day_number: 1, nominator: players[1], nominee: players[2], alive_count: 4,
+    status: "open", votes: players.map((player) => ({ player, choice: "no", weight: 1, dead_vote: false })),
+  }];
+  const voted = recordVote(ballotGame, "ballot", "seat-0", "yes");
+  const before = [createEntry(voted, "Voted")];
+  const closed = finishNomination(voted, "ballot");
+  const after = recordChange(before, closed, []);
+  const history = rememberChange(emptyHistory(), before, after);
+  assert.equal(closed.seats[0].dead_vote_available, false);
+  const undone = stepHistory(history, closed, "undo")!;
+  assert.equal(undone.snapshot.nominations[0].status, "open");
+  assert.equal(undone.snapshot.seats[0].dead_vote_available, true);
+  const redone = stepHistory(undone.history, undone.snapshot, "redo")!;
+  assert.equal(redone.snapshot.nominations[0].status, "closed");
+  assert.equal(redone.snapshot.seats[0].dead_vote_available, false);
+  assert.deepEqual(redone.snapshot, closed);
 });
 
 class MemoryStorage {

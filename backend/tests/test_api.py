@@ -6,22 +6,6 @@ from typing import Dict
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.config import Settings
-from backend.app.main import create_app
-
-
-@pytest.fixture()
-def client(tmp_path: Path) -> TestClient:
-    root = Path(__file__).resolve().parents[2]
-    settings = Settings(
-        root_dir=root,
-        database_path=tmp_path / "games.sqlite3",
-        script_data_path=root / "backend/app/data/official_scripts.json",
-        codex_enabled=False,
-    )
-    with TestClient(create_app(settings)) as test_client:
-        yield test_client
-
 
 def draft_payload() -> Dict[str, object]:
     return {
@@ -323,7 +307,7 @@ def test_temporary_empty_marker_label_does_not_block_later_history_saves(
 def save_test_analysis(client: TestClient, record: dict, monkeypatch):
     from backend.app.models import GameDraft, ReasonResponse
 
-    async def reason(game, question, selected_seat_id, *args):
+    async def reason(game, question, selected_seat_id, *args, **kwargs):
         # Editing while reasoning must not change the captured context or lose the result.
         assert game.model_dump(mode="json") == record["draft"]
         client.app.state.repository.update(
@@ -444,7 +428,7 @@ def test_recovery_accepts_incomplete_edits_but_validates_structure(client: TestC
 def test_branch_carries_only_analyses_from_retained_events(client: TestClient, monkeypatch) -> None:
     from backend.app.models import ReasonResponse
 
-    async def reason(*args):
+    async def reason(*args, **kwargs):
         return ReasonResponse(answer="Analysis", duration_ms=1)
 
     monkeypatch.setattr(client.app.state.harness, "reason", reason)
@@ -710,12 +694,17 @@ def test_saved_player_analysis_preserves_preview_and_perspective(client, monkeyp
     preview = client.post("/api/reason/preview", json=request).json()
     calls = []
 
-    async def reason(game, question, selected_seat_id, perspective, expected_prompt_sha256):
-        actual = client.app.state.harness.preview(game, question, selected_seat_id, perspective)
+    async def reason(
+        game, question, selected_seat_id, perspective, expected_prompt_sha256, timeline=None,
+    ):
+        actual = client.app.state.harness.preview(
+            game, question, selected_seat_id, perspective, timeline,
+        )
         assert perspective == "player"
         assert actual.prompt == preview["prompt"]
         assert expected_prompt_sha256 == preview["prompt_sha256"]
         assert "STORYTELLER_ONLY_SECRET" not in actual.prompt
+        assert "<timeline-evidence-json>" not in actual.prompt
         assert "I learned 1" in actual.prompt
         calls.append(perspective)
         return ReasonResponse(answer="Restricted analysis", duration_ms=10)

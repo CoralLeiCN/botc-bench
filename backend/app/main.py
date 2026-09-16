@@ -175,6 +175,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         event = next((item for item in source.timeline if item.id == payload.event_id), None)
         if event is None:
             raise HTTPException(status_code=404, detail="timeline event not found")
+        timeline = source.timeline[:source.timeline.index(event) + 1]
         try:
             snapshot = GameDraft.model_validate(event.snapshot.model_dump())
         except ValueError as exc:
@@ -186,7 +187,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         validate_script_roles(snapshot)
         try:
             preview = harness.preview(
-                snapshot, payload.question, payload.selected_seat_id, payload.perspective
+                snapshot, payload.question, payload.selected_seat_id, payload.perspective,
+                timeline=timeline,
             )
             if (payload.expected_prompt_sha256 and
                     payload.expected_prompt_sha256 != preview.prompt_sha256):
@@ -194,6 +196,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             result = await harness.reason(
                 snapshot, payload.question, payload.selected_seat_id,
                 payload.perspective, preview.prompt_sha256,
+                timeline=timeline,
             )
             analysis = SavedAnalysis(
                 id=str(uuid4()),
@@ -266,9 +269,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/api/reason/preview", response_model=ReasonPreview)
     def preview_reason(payload: ReasonPreviewRequest) -> ReasonPreview:
         validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
             return harness.preview(
-                payload.game, payload.question, payload.selected_seat_id, payload.perspective
+                payload.game, payload.question, payload.selected_seat_id, payload.perspective,
+                timeline=payload.timeline,
             )
         except HarnessFailed as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -276,10 +282,13 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/api/reason", response_model=ReasonResponse)
     async def reason(payload: ReasonRequest) -> ReasonResponse:
         validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
             return await harness.reason(
                 payload.game, payload.question, payload.selected_seat_id,
                 payload.perspective, payload.expected_prompt_sha256,
+                timeline=payload.timeline,
             )
         except PromptChanged as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc

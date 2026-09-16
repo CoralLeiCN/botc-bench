@@ -95,6 +95,7 @@ export interface Seat {
   public_claim: string;
   private_information: string;
   alive: boolean;
+  dead_vote_available: boolean;
   alignment: Alignment;
   markers: Marker[];
   notes: string;
@@ -119,6 +120,7 @@ export interface GameDraft {
   phase: GamePhase;
   day_number: number;
   notes: string;
+  nominations: Nomination[];
   night_checklist?: NightChecklist | null;
   public_information: string;
 }
@@ -140,6 +142,7 @@ export interface PlayerView {
 
 export interface ReasonRequest {
   game: GameDraft;
+  timeline?: TimelineEntry[];
   question: string;
   selected_seat_id: string | null;
   perspective: "storyteller" | "player";
@@ -149,6 +152,31 @@ export interface ReasonPreview {
   prompt: string;
   prompt_sha256: string;
   player_view: PlayerView | null;
+}
+
+export interface PlayerRef {
+  id: string;
+  position: number;
+  player_name: string;
+}
+
+export interface IndividualVote {
+  player: PlayerRef;
+  choice: "pending" | "yes" | "no";
+  /** Counted contribution; zero or negative weights can record character effects. */
+  weight: number;
+  /** Reserved while open, consumed on completion, released on cancellation. */
+  dead_vote: boolean;
+}
+
+export interface Nomination {
+  id: string;
+  day_number: number;
+  nominator: PlayerRef;
+  nominee: PlayerRef;
+  status: "open" | "closed" | "cancelled";
+  alive_count: number;
+  votes: IndividualVote[];
 }
 
 export interface GameWrite extends GameDraft {

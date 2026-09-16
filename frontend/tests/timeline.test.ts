@@ -12,8 +12,9 @@ function game(): GameDraft {
     seats: Array.from({ length: 5 }, (_, i) => ({
       id: `seat-${i}`, position: i + 1, player_name: `Player ${i}`, role_id: null,
       alive: true, alignment: "unknown", markers: [], notes: "",
+      shown_role_id: null, shown_alignment: "unknown", public_claim: "", private_information: "",
     })),
-    phase: "setup", day_number: 0, notes: "",
+    phase: "setup", day_number: 0, notes: "", public_information: "",
   };
 }
 const metadata = (n: number) => ({ id: `event-${n}`, recorded_at: new Date(1700000000000 + n * 100).toISOString() });
@@ -80,6 +81,32 @@ test("marker expiry edits, removal, and seat movement remain replayable", () => 
   assert.match(history[3].summary, /座位/);
   assert.equal(history[0].snapshot.seats[0].id, "seat-0");
   assert.equal(history[3].snapshot.seats[0].id, "seat-1");
+});
+
+test("shown identity and received information replay independently from actual role", () => {
+  const initial = game();
+  initial.seats[0].role_id = "drunk";
+  initial.seats[0].shown_role_id = "empath";
+  const next = structuredClone(initial);
+  next.seats[0].private_information = "First night: 0";
+  let history = recordChange([createEntry(initial, "Initial", "initial", "", metadata(0))], next, [], metadata(1));
+  next.seats[0].public_claim = "I claim Chef";
+  history = recordChange(history, next, [], metadata(2));
+  next.seats[0].shown_role_id = "washerwoman";
+  history = recordChange(history, next, [], metadata(3));
+  next.public_information = "Day 1 announcement";
+  history = recordChange(history, next, [], metadata(4));
+  assert.equal(history.length, 5);
+  assert.equal(history[0].snapshot.seats[0].private_information, "");
+  assert.equal(history[1].snapshot.seats[0].private_information, "First night: 0");
+  assert.equal(history[1].snapshot.seats[0].public_claim, "");
+  assert.equal(history[2].snapshot.seats[0].public_claim, "I claim Chef");
+  assert.equal(history[2].snapshot.seats[0].shown_role_id, "empath");
+  assert.equal(history[3].snapshot.seats[0].role_id, "drunk");
+  assert.match(history[1].summary, /私人信息/);
+  assert.match(history[2].summary, /公开声明/);
+  assert.match(history[3].summary, /展示角色/);
+  assert.match(history[4].summary, /公开信息/);
 });
 
 test("phase chapters preserve chronology even when a day is revisited", () => {

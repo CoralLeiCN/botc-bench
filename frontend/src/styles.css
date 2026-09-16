@@ -2109,3 +2109,66 @@ select {
   .app-shell { grid-template-rows: 70px minmax(0, 1fr) auto; }
   .timeline-detail-row { padding-block: 6px; }
 }
+
+/* Night workflow and full-height storyteller tools. */
+.right-panel { grid-template-rows: auto minmax(0, 1fr); }
+.right-panel-tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); }
+.right-panel-tabs button { flex: 1; padding: 9px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); font-size: 11px; }
+.right-panel-tabs button.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(214, 167, 78, 0.3); }
+.right-panel-content { min-height: 0; overflow-y: auto; }
+.right-panel-content[hidden] { display: none; }
+.right-panel-content .inspector-section, .right-panel-content .codex-section { overflow: visible; }
+.night-section { padding: 12px; font-size: 11px; line-height: 1.6; }
+.night-section h2 { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.night-section h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.night-section button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 8px; font-size: 11px; background: #19191c; color: var(--text); }
+.night-section button:hover:not(:disabled) { border-color: var(--accent); }
+.night-section .night-primary { background: var(--accent-soft); color: var(--accent); border-color: rgba(214, 167, 78, 0.4); }
+.night-count { color: var(--accent); font-variant-numeric: tabular-nums; }
+.night-help { color: var(--muted); font-size: 10px; margin: 8px 0; }
+.night-start { padding: 12px; border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
+.night-start p { margin: 0 0 10px; }
+.night-start small { display: block; color: var(--muted); margin-top: 8px; }
+.night-progress { height: 3px; background: var(--line); margin: 12px 0; border-radius: 3px; overflow: hidden; }
+.night-progress span { display: block; height: 100%; background: var(--accent); transition: width 180ms; }
+.night-next { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 9px; background: #302618; border-radius: 7px; }
+.night-next b { flex: 1; color: var(--accent); font-size: 11px; overflow-wrap: anywhere; }
+.night-next button { flex-shrink: 0; font-size: 10px; }
+.night-warning { color: var(--accent); font-size: 10px; margin: 8px 0; }
+.night-sync { margin: 0 0 8px; }
+.night-step-list { list-style: none; padding: 0; margin: 0 0 12px; max-height: 190px; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; }
+.night-step-list li + li { border-top: 1px solid var(--line); }
+.night-step-list button { display: grid; grid-template-columns: 20px minmax(0, 1fr) 34px; width: 100%; border-radius: 0; border-color: transparent; text-align: left; background: transparent; }
+.night-step-list button.selected { background: rgba(255, 255, 255, 0.05); }
+.night-step-list button.next { color: var(--accent); border-left: 2px solid var(--accent); }
+.night-step-list button > span:nth-child(2) { overflow-wrap: anywhere; }
+.night-step-list small { color: var(--muted); font-size: 9px; text-align: right; }
+.night-step-number { color: var(--muted); display: grid; place-items: center; font-size: 10px; }
+.night-step-detail { scroll-margin-top: 56px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 10px; }
+.night-step-detail header { display: flex; gap: 4px; align-items: flex-start; margin-bottom: 8px; }
+.night-step-detail header h3 { flex: 1; overflow-wrap: anywhere; }
+.night-step-detail header button { padding: 4px; }
+.night-seat-context { display: grid; gap: 4px; font-size: 10px; margin-bottom: 10px; }
+.night-seat-context span { color: var(--accent); overflow-wrap: anywhere; }
+.night-official { padding: 8px; background: #111113; border-radius: 6px; }
+.night-official small { color: var(--faint); font-size: 9px; }
+.night-official p, .night-ability p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 5px 0; font-size: 11px; }
+.night-official p[lang="en"], .night-ability p[lang="en"] { color: var(--muted); font-size: 10px; }
+.night-ability { margin: 8px 0; }
+.night-ability summary, .night-custom summary { cursor: pointer; color: var(--muted); }
+.night-fields { display: grid; gap: 9px; padding: 0; margin: 10px 0; border: 0; min-width: 0; }
+.night-fields label { display: grid; gap: 4px; min-width: 0; }
+.night-fields label > span { color: var(--muted); font-size: 10px; }
+.night-fields textarea, .night-fields input, .night-fields select { width: 100%; min-width: 0; padding: 7px; font-size: 11px; }
+.night-fields textarea { resize: vertical; min-height: 48px; }
+.night-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.night-custom { margin: 14px 0; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.night-custom summary svg { vertical-align: middle; }
+.night-effects h3 { display: flex; justify-content: space-between; }
+.night-effects h3 small { color: var(--accent); font-weight: 400; }
+.night-effect { padding: 9px; border: 1px solid var(--line); border-radius: 7px; margin: 8px 0; overflow-wrap: anywhere; }
+.night-effect b { font-size: 11px; }
+.night-effect p { color: var(--muted); margin: 5px 0 8px; }
+.night-finish { width: 100%; margin-top: 12px; }
+.seat-card.night-next-seat { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(214, 167, 78, 0.25), 0 0 26px rgba(214, 167, 78, 0.18); opacity: 1; }
+.night-seat-badge { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: #3a2b16; color: #f4d194; border: 1px solid var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 9px; white-space: nowrap; }

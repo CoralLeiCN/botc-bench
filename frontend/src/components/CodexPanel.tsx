@@ -17,11 +17,11 @@ interface CodexPanelProps {
   busy: boolean;
   error: string | null;
   onAsk: (question: string) => Promise<void>;
+  onOpenNight: () => void;
 }
 const quickQuestions = [
   ["检查配比", "检查当前角色配比、已分配角色与角色配置修正，列出需要说书人确认的问题。"],
   ["检查冲突", "检查当前局面的角色、状态与座位是否存在规则冲突或容易遗漏的互动。"],
-  ["今晚顺序", "根据当前阶段、真实角色与状态，给出今晚需要关注的行动顺序和说书人提醒。"],
 ] as const;
 
 export function CodexPanel({
@@ -32,6 +32,7 @@ export function CodexPanel({
   busy,
   error,
   onAsk,
+  onOpenNight,
 }: CodexPanelProps) {
   const [question, setQuestion] = useState("");
 
@@ -64,6 +65,7 @@ export function CodexPanel({
       </div>
 
       <div className="quick-prompts">
+        <button type="button" onClick={onOpenNight}>今晚清单</button>
         {quickQuestions.map(([label, prompt]) => (
           <button
             type="button"

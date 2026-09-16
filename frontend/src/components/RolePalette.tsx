@@ -1,3 +1,4 @@
+import { useLanguage } from "../LanguageProvider";
 import { RotateCcw, Search, SlidersHorizontal, Sparkle } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -29,6 +30,7 @@ export function RolePalette({
   onCompositionChange,
   onResetComposition,
 }: RolePaletteProps) {
+  const { t, localize } = useLanguage();
   const [query, setQuery] = useState("");
   const availableRoles = allRoles(script);
   const assigned = assignedCounts(game.seats, availableRoles);
@@ -59,17 +61,17 @@ export function RolePalette({
       <section className="composition-editor">
         <div className="panel-title-row">
           <div>
-            <span className="eyebrow">SETUP</span>
-            <h2>角色配比</h2>
+            <span className="eyebrow">{t("配置")}</span>
+            <h2>{t("角色配比")}</h2>
           </div>
-          <button type="button" className="ghost-icon" onClick={onResetComposition} title="恢复建议配比">
+          <button type="button" className="ghost-icon" onClick={onResetComposition} title={t("恢复建议配比")}>
             <RotateCcw size={14} />
           </button>
         </div>
         <div className="composition-grid">
           {coreTeams.map((team) => (
             <label key={team} className={`composition-input ${team}`}>
-              <span>{TEAM_LABELS[team]}</span>
+              <span>{t(TEAM_LABELS[team])}</span>
               <input
                 type="number"
                 min={0}
@@ -77,11 +79,11 @@ export function RolePalette({
                 value={game.composition[team]}
                 onChange={(event) => changeComposition(team, Number(event.target.value))}
               />
-              <small>已配 {assigned[team]}</small>
+              <small>{t("已配")} {assigned[team]}</small>
             </label>
           ))}
           <label className="composition-input traveller">
-            <span>旅行者</span>
+            <span>{t("旅行者")}</span>
             <input
               type="number"
               min={0}
@@ -89,23 +91,24 @@ export function RolePalette({
               value={game.composition.traveller}
               onChange={(event) => changeComposition("traveller", Number(event.target.value))}
             />
-            <small>15 人以上</small>
+            <small>{t("15 人以上")}</small>
           </label>
         </div>
         <div className="composition-formula">
           <span>
-            基准 {baseComposition.townsfolk}/{baseComposition.outsider}/{baseComposition.minion}/
+
+           {t("基准")} {baseComposition.townsfolk}/{baseComposition.outsider}/{baseComposition.minion}/
             {baseComposition.demon}
           </span>
           {activeSetupRoles.map((role) => (
             <i key={role.id} className={modifierIds.includes(role.id) ? "applied" : "review"}>
-              {role.name.zh_hans} {role.setup_effect.zh_hans ?? "需说书人裁定"}
+              {localize(role.name)} {localize(role.setup_effect, t("需说书人裁定"))}
             </i>
           ))}
         </div>
         {game.composition.manual && (
           <p className="inline-note">
-            <SlidersHorizontal size={12} /> 使用说书人手动配比
+            <SlidersHorizontal size={12} /> {t("使用说书人手动配比")}
           </p>
         )}
       </section>
@@ -113,8 +116,8 @@ export function RolePalette({
       <section className="role-library">
         <div className="panel-title-row role-heading">
           <div>
-            <span className="eyebrow">SCRIPT ROSTER</span>
-            <h2>角色库</h2>
+            <span className="eyebrow">{t("剧本角色")}</span>
+            <h2>{t("角色库")}</h2>
           </div>
           <span className="count-badge">{script.roles.length}</span>
         </div>
@@ -123,12 +126,13 @@ export function RolePalette({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索中英文角色…"
+            placeholder={t("搜索中英文角色…")}
           />
         </label>
         {selectedRoleId && (
           <button type="button" className="clear-selection" onClick={() => onSelectRole(null)}>
-            已选角色，点击座位分配 · 取消
+
+           {t("已选角色，点击座位分配 · 取消")}
           </button>
         )}
         <div className="role-groups">
@@ -144,7 +148,7 @@ export function RolePalette({
             return (
               <section className="role-group" key={team}>
                 <div className={`team-heading ${team}`}>
-                  <span>{TEAM_LABELS[team]}</span>
+                  <span>{t(TEAM_LABELS[team])}</span>
                   <small>{roles.length}</small>
                 </div>
                 {roles.map((role) => (
@@ -176,21 +180,21 @@ function RoleRow({
   useCount: number;
   onSelect: () => void;
 }) {
+  const { t, localize } = useLanguage();
   return (
     <button
       type="button"
       className={`role-row ${role.team} ${selected ? "selected" : ""}`}
       onClick={onSelect}
-      title={`${role.ability.zh_hans}\n${role.ability.en}`}
+      title={localize(role.ability)}
     >
       <span className="role-sigil" aria-hidden="true">
-        {role.name.zh_hans?.slice(0, 1)}
+        {localize(role.name).slice(0, 1)}
       </span>
       <span className="role-name">
-        <strong>{role.name.zh_hans}</strong>
-        <small>{role.name.en}</small>
+        <strong>{localize(role.name)}</strong>
       </span>
-      {role.setup && <Sparkle size={13} className="setup-star" aria-label="影响配置" />}
+      {role.setup && <Sparkle size={13} className="setup-star" aria-label={t("影响配置")} />}
       {useCount > 0 && <span className="use-count">×{useCount}</span>}
     </button>
   );

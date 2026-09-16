@@ -1,3 +1,4 @@
+import { useLanguage, LanguageSwitch } from "../LanguageProvider";
 import {
   Archive,
   CirclePlus,
@@ -62,6 +63,7 @@ export function Toolbar({
   onSave,
   canUndo, canRedo, onUndo, onRedo, onDuplicate, onExport, onImport,
 }: ToolbarProps) {
+  const { t, localize, locale } = useLanguage();
   const fileInput = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const counts = assignedCounts(game.seats, allRoles(script));
@@ -75,13 +77,14 @@ export function Toolbar({
         </div>
         <div>
           <strong>Ravenswood Desk</strong>
-          <span>LOCAL STORYTELLER WORKSPACE</span>
+          <span>{t("本地说书人工作区")}</span>
+          <LanguageSwitch />
         </div>
       </div>
 
       <div className="topbar-main">
         <label className="compact-field game-name-field">
-          <span>局面</span>
+          <span>{t("局面")}</span>
           <input
             disabled={readOnly}
             value={game.name}
@@ -91,11 +94,11 @@ export function Toolbar({
         </label>
 
         <label className="compact-field script-field">
-          <span>剧本</span>
+          <span>{t("剧本")}</span>
           <select disabled={readOnly} value={game.script_id} onChange={(event) => onScriptChange(event.target.value)}>
             {scripts.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name.zh_hans} · {item.name.en}
+                {localize(item.name)}
               </option>
             ))}
           </select>
@@ -103,14 +106,14 @@ export function Toolbar({
 
         <label className="compact-field players-field">
           <span>
-            <Users size={12} /> 玩家
+            <Users size={12} /> {t("玩家")}
           </span>
           <div className="stepper">
             <button
               type="button"
               onClick={() => onPlayerCountChange(game.player_count - 1)}
               disabled={readOnly || game.player_count <= 5}
-              aria-label="减少玩家"
+              aria-label={t("减少玩家")}
             >
               −
             </button>
@@ -126,23 +129,23 @@ export function Toolbar({
               type="button"
               onClick={() => onPlayerCountChange(game.player_count + 1)}
               disabled={readOnly || game.player_count >= 20}
-              aria-label="增加玩家"
+              aria-label={t("增加玩家")}
             >
               +
             </button>
           </div>
         </label>
 
-        <div className="composition-strip" aria-label="当前角色配比">
+        <div className="composition-strip" aria-label={t("当前角色配比")}>
           {teams.map((team) => (
             <span key={team} className={`composition-pill ${team}`}>
-              <b>{TEAM_SHORT[team]}</b>
+              <b>{t(TEAM_SHORT[team])}</b>
               {counts[team]}/{game.composition[team]}
             </span>
           ))}
           {game.composition.traveller > 0 && (
             <span className="composition-pill traveller">
-              <b>旅</b>{counts.traveller}/{game.composition.traveller}
+              <b>{t("旅")}</b>{counts.traveller}/{game.composition.traveller}
             </span>
           )}
         </div>
@@ -151,39 +154,39 @@ export function Toolbar({
       <div className="topbar-actions">
         <div className="edit-actions">
           <button type="button" className="icon-button" onClick={onUndo}
-            disabled={readOnly || loadingGame || !canUndo} title="撤销局面修改 (Cmd/Ctrl+Z)" aria-label="撤销局面修改"><Undo2 size={15} /></button>
+            disabled={readOnly || loadingGame || !canUndo} title={t("撤销局面修改 (Cmd/Ctrl+Z)")} aria-label={t("撤销局面修改")}><Undo2 size={15} /></button>
           <button type="button" className="icon-button" onClick={onRedo}
-            disabled={readOnly || loadingGame || !canRedo} title="重做局面修改 (Cmd/Ctrl+Shift+Z)" aria-label="重做局面修改"><Redo2 size={15} /></button>
+            disabled={readOnly || loadingGame || !canRedo} title={t("重做局面修改 (Cmd/Ctrl+Shift+Z)")} aria-label={t("重做局面修改")}><Redo2 size={15} /></button>
           <div className="file-menu">
             <button type="button" className="file-menu-trigger" aria-expanded={menuOpen}
-              disabled={saving || loadingGame} onClick={() => setMenuOpen(!menuOpen)}>存档操作 ▾</button>
+              disabled={saving || loadingGame} onClick={() => setMenuOpen(!menuOpen)}>{t("存档操作 ▾")}</button>
             {menuOpen && <>
-              <button className="file-menu-dismiss" aria-label="关闭存档操作" onClick={() => setMenuOpen(false)} />
+              <button className="file-menu-dismiss" aria-label={t("关闭存档操作")} onClick={() => setMenuOpen(false)} />
               <div className="file-menu-items" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}>
                 <button type="button" disabled={!currentGameId || saving || loadingGame}
-                  onClick={() => { setMenuOpen(false); onDuplicate(); }}><Copy size={14} />复制当前存档</button>
+                  onClick={() => { setMenuOpen(false); onDuplicate(); }}><Copy size={14} />{t("复制当前存档")}</button>
                 <button type="button" disabled={saving || loadingGame}
-                  onClick={() => { setMenuOpen(false); onExport(); }}><Download size={14} />导出 JSON</button>
+                  onClick={() => { setMenuOpen(false); onExport(); }}><Download size={14} />{t("导出 JSON")}</button>
                 <button type="button" disabled={saving || loadingGame}
-                  onClick={() => { setMenuOpen(false); fileInput.current?.click(); }}><Upload size={14} />导入 JSON</button>
+                  onClick={() => { setMenuOpen(false); fileInput.current?.click(); }}><Upload size={14} />{t("导入 JSON")}</button>
               </div>
             </>}
           </div>
           <input ref={fileInput} type="file" accept=".json,application/json" hidden
-            aria-label="导入 JSON 文件" onChange={(event) => {
+            aria-label={t("导入 JSON 文件")} onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (file) onImport(file);
             }} />
         </div>
-        <label className="archive-select" title="载入本地存档">
+        <label className="archive-select" title={t("载入本地存档")}>
           <Archive size={15} />
           <select
             value={currentGameId ?? ""}
             onChange={(event) => onLoadGame(event.target.value)}
             disabled={saving || loadingGame}
           >
-            <option value="">本地存档</option>
+            <option value="">{t("本地存档")}</option>
             {savedGames.map((saved) => (
               <option key={saved.id} value={saved.id}>
                 {saved.name}
@@ -195,7 +198,7 @@ export function Toolbar({
           type="button"
           className="icon-button"
           onClick={onNewGame}
-          title="新建局面"
+          title={t("新建局面")}
           disabled={saving || loadingGame}
         >
           <CirclePlus size={17} />
@@ -213,14 +216,14 @@ export function Toolbar({
           ) : (
             <ShieldCheck size={16} />
           )}
-          {saving ? "保存中" : needsSave ? "保存局面" : "已保存"}
+          {saving ? t("保存中") : needsSave ? t("保存局面") : t("已保存")}
         </button>
         <span className={`save-state ${dirty ? "dirty" : ""}`}>
           {dirty
-            ? "有未保存修改"
+            ? t("有未保存修改")
             : lastSavedAt
-              ? `保存于 ${new Date(lastSavedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`
-              : "本地草稿"}
+              ? t("保存于 {0}", [new Date(lastSavedAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })])
+              : t("本地草稿")}
         </span>
       </div>
     </header>

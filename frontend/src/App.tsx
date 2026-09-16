@@ -1,3 +1,5 @@
+import { uiMessage, type UiMessage } from "./language";
+import { useLanguage, LanguageSwitch } from "./LanguageProvider";
 import { AlertTriangle, Eye, LoaderCircle, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, ApiFailure } from "./api";
@@ -43,6 +45,9 @@ import type {
 } from "./types";
 
 export default function App() {
+  const { t, language } = useLanguage();
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [scripts, setScripts] = useState<Script[]>([]);
   const [savedGames, setSavedGames] = useState<GameSummary[]>([]);
   const [harnessStatus, setHarnessStatus] = useState<HarnessStatus | null>(null);
@@ -52,7 +57,7 @@ export default function App() {
     setEditor((current) => ({ ...current, timeline: typeof next === "function" ? next(current.timeline) : next }));
   }, []);
   const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
-  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState<UiMessage | null>(null);
   const recoveryKeyRef = useRef<string | null>(null);
   const [recoveryReady, setRecoveryReady] = useState(false);
   const game = timeline[timeline.length - 1]?.snapshot ?? null;
@@ -81,7 +86,7 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [loadingGame, setLoadingGame] = useState(false);
   const [fatalError, setFatalError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<UiMessage | null>(null);
   const [codexBusy, setCodexBusy] = useState(false);
   const [codexAnswer, setCodexAnswer] = useState("");
   const [codexError, setCodexError] = useState<string | null>(null);
@@ -96,7 +101,7 @@ export default function App() {
     void Promise.all([api.scripts(), api.games(), api.harnessStatus()])
       .then(async ([scriptData, gameData, status]) => {
         if (!active) return;
-        if (!scriptData.length) throw new Error("后端没有返回可用剧本");
+        if (!scriptData.length) throw new Error(t("后端没有返回可用剧本"));
         setScripts(scriptData);
         setSavedGames(gameData);
         setHarnessStatus(status);
@@ -119,8 +124,8 @@ export default function App() {
             setDirty(recovered.dirty || !compatible);
             setAutoSaveFailed(false);
             setNotice(compatible || !recovered.record
-              ? "已恢复本机草稿及撤销记录，自动保存将继续"
-              : "原存档已有变化或已删除，草稿已作为独立副本恢复");
+              ? uiMessage("已恢复本机草稿及撤销记录，自动保存将继续")
+              : uiMessage("原存档已有变化或已删除，草稿已作为独立副本恢复"));
             setRecoveryReady(true);
             return;
           }
@@ -128,10 +133,10 @@ export default function App() {
           if (!active) return;
           // Preserve a damaged checkpoint instead of replacing it with an empty game.
           recoveryKeyRef.current = null;
-          setRecoveryError(`草稿恢复不可用：${readError(error)}。原草稿缓存已保留，请先保存到本地存档。`);
+          setRecoveryError(uiMessage("草稿恢复不可用：{0}。原草稿缓存已保留，请先保存到本地存档。", [readError(error)]));
         }
         if (!active) return;
-        const initial = createDraft(scriptData[0]);
+        const initial = createDraft(scriptData[0], 7, languageRef.current);
         setTimeline([createEntry(initial, "开始记录", "initial")]);
         setSelectedSeatId(initial.seats[0].id);
         setRecoveryReady(true);
@@ -153,7 +158,7 @@ export default function App() {
       });
       setRecoveryError(null);
     } catch (error) {
-      setRecoveryError(`草稿缓存失败：${readError(error)}。请保存局面或导出 JSON 备份。`);
+      setRecoveryError(uiMessage("草稿缓存失败：{0}。请保存局面或导出 JSON 备份。", [readError(error)]));
     }
   }, [recoveryReady, timeline, history, record, branchOrigin, dirty]);
 
@@ -166,8 +171,8 @@ export default function App() {
     [displayedGame?.seats, selectedSeatId],
   );
   const issues = useMemo(
-    () => (displayedGame && script ? validateDraft(displayedGame, script) : []),
-    [displayedGame, script],
+    () => (displayedGame && script ? validateDraft(displayedGame, script, language) : []),
+    [displayedGame, script, language],
   );
 
   const invalidateCodexContext = useCallback(() => {
@@ -227,7 +232,7 @@ export default function App() {
       if (replaying || viewAsSeatId || branchingRef.current) return;
       if (game) {
         const error = votingEditError(game, updater(game));
-        if (error) { setNotice(error); return; }
+        if (error) { setNotice(uiMessage(error)); return; }
       }
       gameRevisionRef.current += 1;
       invalidateCodexContext();
@@ -252,7 +257,7 @@ export default function App() {
   const saveGame = useCallback(async () => {
     if (!game || savingRef.current) return null;
     if (loadingGameRef.current) {
-      setNotice("请等待当前存档载入完成后再保存");
+      setNotice(uiMessage("请等待当前存档载入完成后再保存"));
       return null;
     }
     const savedRevision = gameRevisionRef.current;
@@ -276,7 +281,7 @@ export default function App() {
         setDirty(false);
         setNotice(null);
       } else {
-        setNotice("保存期间产生了新修改：旧快照已保存，当前修改仍待保存");
+        setNotice(uiMessage("保存期间产生了新修改：旧快照已保存，当前修改仍待保存"));
       }
       setAutoSaveFailed(false);
       await refreshSavedGames();
@@ -286,8 +291,8 @@ export default function App() {
       const message = readError(error);
       setNotice(
         error instanceof ApiFailure && error.status === 409
-          ? "保存冲突：该存档已被其他页面更新，请重新载入后再保存"
-          : `保存失败：${message}。自动保存已暂停，请修正后点击保存重试。`,
+          ? uiMessage("保存冲突：该存档已被其他页面更新，请重新载入后再保存")
+          : uiMessage("保存失败：{0}。自动保存已暂停，请修正后点击保存重试。", [message]),
       );
       return null;
     } finally {
@@ -385,7 +390,7 @@ export default function App() {
     if (
       (affected.length > 0 || affectedMarkers.length > 0) &&
       !window.confirm(
-        `切换剧本会清除 ${affected.length} 个座位的不兼容真实或展示角色和 ${affectedMarkers.length} 个角色专属标记；玩家名、声明、信息及通用标记会保留。继续吗？`,
+        t("切换剧本会清除 {0} 个座位的不兼容真实或展示角色和 {1} 个角色专属标记；玩家名、声明、信息及通用标记会保留。继续吗？", [affected.length, affectedMarkers.length]),
       )
     ) {
       return;
@@ -421,12 +426,12 @@ export default function App() {
     if (
       bounded < game.player_count &&
       game.seats.slice(bounded).some(hasSeatData) &&
-      !window.confirm(`减少玩家会移除末尾 ${game.player_count - bounded} 个已有数据的座位。继续吗？`)
+      !window.confirm(t("减少玩家会移除末尾 {0} 个已有数据的座位。继续吗？", [game.player_count - bounded]))
     ) {
       return;
     }
     updateGame((current) => {
-      const seats = resizeSeats(current.seats, bounded);
+      const seats = resizeSeats(current.seats, bounded, language);
       return {
         ...current,
         player_count: bounded,
@@ -518,15 +523,15 @@ export default function App() {
   const newGame = () => {
     if (!script || branchingRef.current) return;
     if (loadingGameRef.current) {
-      setNotice("请等待当前存档载入完成后再新建局面");
+      setNotice(uiMessage("请等待当前存档载入完成后再新建局面"));
       return;
     }
     if (savingRef.current) {
-      setNotice("请等待当前保存完成后再新建局面");
+      setNotice(uiMessage("请等待当前保存完成后再新建局面"));
       return;
     }
-    if (dirty && !window.confirm("当前局面还有未保存修改。仍要新建吗？")) return;
-    const draft = createDraft(script, game?.player_count ?? 7);
+    if (dirty && !window.confirm(t("当前局面还有未保存修改。仍要新建吗？"))) return;
+    const draft = createDraft(script, game?.player_count ?? 7, language);
     documentEpochRef.current += 1;
     gameRevisionRef.current += 1;
     invalidateCodexContext();
@@ -547,14 +552,14 @@ export default function App() {
   const loadGame = async (id: string) => {
     if (!id || branchingRef.current) return;
     if (loadingGameRef.current) {
-      setNotice("已有存档正在载入，请稍候");
+      setNotice(uiMessage("已有存档正在载入，请稍候"));
       return;
     }
     if (savingRef.current) {
-      setNotice("请等待当前保存完成后再载入其他存档");
+      setNotice(uiMessage("请等待当前保存完成后再载入其他存档"));
       return;
     }
-    if (dirty && !window.confirm("当前局面还有未保存修改。仍要载入存档吗？")) return;
+    if (dirty && !window.confirm(t("当前局面还有未保存修改。仍要载入存档吗？"))) return;
     const requestedDocument = documentEpochRef.current;
     const requestedRevision = gameRevisionRef.current;
     loadingGameRef.current = true;
@@ -565,14 +570,14 @@ export default function App() {
         documentEpochRef.current !== requestedDocument ||
         gameRevisionRef.current !== requestedRevision
       ) {
-        setNotice("载入期间当前局面已变化，迟到的存档响应未覆盖这些修改");
+        setNotice(uiMessage("载入期间当前局面已变化，迟到的存档响应未覆盖这些修改"));
         return;
       }
       adoptRecord(loaded);
-      setNotice(`已载入「${loaded.draft.name}」`);
+      setNotice(uiMessage("已载入「{0}」", [loaded.draft.name]));
       setCodexAnswer("");
     } catch (error) {
-      setNotice(`载入失败：${readError(error)}`);
+      setNotice(uiMessage("载入失败：{0}", [readError(error)]));
     } finally {
       loadingGameRef.current = false;
       setLoadingGame(false);
@@ -590,7 +595,7 @@ export default function App() {
     try {
       const source = dirty || !record ? await saveGame() : record;
       if (!source) {
-        setCodexError("请先完成配置并保存局面，再运行分析。");
+        setCodexError(t("请先完成配置并保存局面，再运行分析。"));
         return;
       }
       const result = await api.analyseGame(source.id, eventId, reasonRequest, preview.prompt_sha256);
@@ -598,7 +603,7 @@ export default function App() {
         setAnalyses((current) => current.some((item) => item.id === result.id) ? current : [...current, result]);
         if (codexContextEpochRef.current === requestContext) setCodexAnswer(result.answer);
       } else {
-        setNotice("分析已保存到原存档；载入原存档即可查看。");
+        setNotice(uiMessage("分析已保存到原存档；载入原存档即可查看。"));
       }
     } catch (error) {
       if (codexContextEpochRef.current === requestContext) setCodexError(readError(error));
@@ -635,10 +640,10 @@ export default function App() {
       if (!source) return;
       const branched = await api.branchGame(source.id, eventId, source.version);
       adoptRecord(branched);
-      setNotice("已创建并保存分支，可以从这个时刻继续编辑");
+      setNotice(uiMessage("已创建并保存分支，可以从这个时刻继续编辑"));
       await refreshSavedGames();
     } catch (error) {
-      setNotice(`创建分支失败：${readError(error)}`);
+      setNotice(uiMessage("创建分支失败：{0}", [readError(error)]));
     } finally {
       branchingRef.current = false;
       setBranching(false);
@@ -653,10 +658,10 @@ export default function App() {
       const source = dirty ? await saveGame() : record;
       if (!source) return;
       adoptRecord(await api.duplicateGame(source.id, source.version));
-      setNotice("已创建独立副本，原局面与分析仍保留");
+      setNotice(uiMessage("已创建独立副本，原局面与分析仍保留"));
       await refreshSavedGames();
     } catch (error) {
-      setNotice(`复制失败：${readError(error)}`);
+      setNotice(uiMessage("复制失败：{0}", [readError(error)]));
     } finally { branchingRef.current = false; setBranching(false); }
   };
 
@@ -669,34 +674,35 @@ export default function App() {
       if (!source) return;
       const archive = await api.exportGame(source.id);
       downloadJson(archive, `${archive.game.draft.name.replace(/[\\/:*?"<>|]/g, "_") || "game"}.json`);
-      setNotice("已导出完整存档：当前局面、时间线和已保存分析");
+      setNotice(uiMessage("已导出完整存档：当前局面、时间线和已保存分析"));
     } catch (error) {
-      setNotice(`导出失败：${readError(error)}`);
+      setNotice(uiMessage("导出失败：{0}", [readError(error)]));
     } finally { branchingRef.current = false; setBranching(false); }
   };
 
   const importGame = async (file: File) => {
     if (branchingRef.current || savingRef.current || loadingGameRef.current) return;
-    if (dirty && !window.confirm("当前局面还有未保存修改。仍要导入并载入新存档吗？")) return;
+    if (dirty && !window.confirm(t("当前局面还有未保存修改。仍要导入并载入新存档吗？"))) return;
     branchingRef.current = true;
     setBranching(true);
     try {
-      if (file.size > 50 * 1024 * 1024) throw new Error("文件超过 50 MB，请使用较小的单局备份");
+      if (file.size > 50 * 1024 * 1024) throw new Error(t("文件超过 50 MB，请使用较小的单局备份"));
       const archive: unknown = JSON.parse(await file.text());
       const imported = await api.importGame(archive);
       adoptRecord(imported);
-      setNotice(`已导入「${imported.draft.name}」为独立存档`);
+      setNotice(uiMessage("已导入「{0}」为独立存档", [imported.draft.name]));
       await refreshSavedGames();
     } catch (error) {
-      setNotice(`导入失败：${readError(error)}`);
+      setNotice(uiMessage("导入失败：{0}", [readError(error)]));
     } finally { branchingRef.current = false; setBranching(false); }
   };
 
   if (fatalError) {
     return (
       <div className="fatal-screen">
+        <LanguageSwitch />
         <AlertTriangle size={30} />
-        <h1>无法连接本地工作区</h1>
+        <h1>{t("无法连接本地工作区")}</h1>
         <p>{fatalError}</p>
         <code>uv run uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000</code>
       </div>
@@ -706,8 +712,10 @@ export default function App() {
   if (!game || !displayedGame || !script) {
     return (
       <div className="loading-screen">
+        <LanguageSwitch />
         <LoaderCircle size={24} className="spin" />
-        正在打开魔典…
+
+       {t("正在打开魔典…")}
       </div>
     );
   }
@@ -743,18 +751,19 @@ export default function App() {
       <div className="app-shell player-mode">
         <header className="perspective-toolbar panel-shell">
           <Eye size={20} />
-          <div><strong>玩家视角</strong><small>{replaying ? "当前选定的历史时刻" : "当前局面"} · 只读预览</small></div>
+          <LanguageSwitch />
+          <div><strong>{t("玩家视角")}</strong><small>{replaying ? t("当前选定的历史时刻") : t("当前局面")} {t("· 只读预览")}</small></div>
           <label>
-            <span>查看玩家</span>
-            <select aria-label="查看玩家" value={viewAsSeatId} onChange={(event) => changePerspective(event.target.value)}>
-              {displayedGame.seats.map((seat) => <option key={seat.id} value={seat.id}>{seat.position} 号 · {seat.player_name}</option>)}
+            <span>{t("查看玩家")}</span>
+            <select aria-label={t("查看玩家")} value={viewAsSeatId} onChange={(event) => changePerspective(event.target.value)}>
+              {displayedGame.seats.map((seat) => <option key={seat.id} value={seat.id}>{seat.position} {t("号 ·")} {seat.player_name}</option>)}
             </select>
           </label>
-          <button type="button" onClick={() => changePerspective(null)}>返回说书人视角</button>
+          <button type="button" onClick={() => changePerspective(null)}>{t("返回说书人视角")}</button>
         </header>
         <div className="player-workspace">
           {playerView ? <PlayerView view={playerView} script={script} /> : (
-            <main className="player-view panel-shell" role="status">{previewError ?? "正在生成玩家视角…"}</main>
+            <main className="player-view panel-shell" role="status">{previewError ?? t("正在生成玩家视角…")}</main>
           )}
           <aside className="player-agent panel-shell">{codexPanel}</aside>
         </div>
@@ -790,11 +799,11 @@ export default function App() {
         onImport={(file) => void importGame(file)}
       />
 
-      {recoveryError && <div className="recovery-warning" role="alert">{recoveryError}</div>}
+      {recoveryError && <div className="recovery-warning" role="alert">{t(recoveryError.key, recoveryError.values)}</div>}
       {notice && (
-        <div className={`notice-bar ${notice.includes("失败") || notice.includes("冲突") ? "error" : ""}`}>
-          {notice}
-          <button type="button" onClick={() => setNotice(null)} aria-label="关闭通知">
+        <div className={`notice-bar ${/失败|冲突/.test(notice.key) ? "error" : ""}`}>
+          {t(notice.key, notice.values)}
+          <button type="button" onClick={() => setNotice(null)} aria-label={t("关闭通知")}>
             <X size={13} />
           </button>
         </div>
@@ -834,8 +843,8 @@ export default function App() {
         />
 
         <aside className="right-panel panel-shell">
-          <nav className="right-panel-tabs" aria-label="说书人工具">
-            {([["night", "今晚清单"], ["inspector", "玩家检查器"], ["codex", "Codex 辅助"]] as const).map(([tab, label]) => (
+          <nav className="right-panel-tabs" aria-label={t("说书人工具")}>
+            {([["night", t("今晚清单")], ["inspector", t("玩家检查器")], ["codex", t("Codex 辅助")]] as const).map(([tab, label]) => (
               <button
                 key={tab}
                 type="button"
@@ -890,6 +899,7 @@ export default function App() {
       <Timeline
         key={documentEpochRef.current}
         entries={timeline}
+        scripts={scripts}
         replayIndex={replayIndex}
         branchOrigin={branchOrigin}
         busy={saving || loadingGame || branching}

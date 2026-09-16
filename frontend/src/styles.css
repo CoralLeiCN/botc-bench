@@ -2328,3 +2328,37 @@ select {
 .night-finish { width: 100%; margin-top: 12px; }
 .seat-card.night-next-seat { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(214, 167, 78, 0.25), 0 0 26px rgba(214, 167, 78, 0.18); opacity: 1; }
 .night-seat-badge { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: #3a2b16; color: #f4d194; border: 1px solid var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 9px; white-space: nowrap; }
+
+/* Language is a display preference, available in live, replay, and player views. */
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.language-switch button {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+.language-switch button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.language-switch button:hover { color: var(--text); }
+.brand-block .language-switch { margin-top: 5px; }
+.brand-block > div:last-child { min-width: 0; }
+.role-name strong, .seat-role b { overflow-wrap: anywhere; }
+:lang(en) .composition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+:lang(en) .composition-input span { white-space: normal; text-align: center; }
+:lang(en) .composition-input small { white-space: normal; }
+.brand-block > div:last-child > span { font-size: 7px; letter-spacing: 0.08em; }
+.role-name strong { white-space: normal; }

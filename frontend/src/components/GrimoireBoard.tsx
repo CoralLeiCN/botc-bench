@@ -1,3 +1,5 @@
+import { localizedMarker } from "../language";
+import { useLanguage } from "../LanguageProvider";
 import type { CSSProperties } from "react";
 import { AlertTriangle, CheckCircle2, Moon, MousePointer2, Skull, UserRound } from "lucide-react";
 import { allRoles, assignedCounts } from "../game";
@@ -32,6 +34,7 @@ export function GrimoireBoard({
   issues,
   onSeatClick,
 }: GrimoireBoardProps) {
+  const { t, localize, language } = useLanguage();
   const availableRoles = allRoles(script);
   const roleById = new Map(availableRoles.map((role) => [role.id, role]));
   const assigned = assignedCounts(game.seats, availableRoles);
@@ -43,17 +46,16 @@ export function GrimoireBoard({
     <main className="board-panel panel-shell">
       <div className="board-toolbar">
         <div>
-          <span className="eyebrow">{replaying ? "REPLAY · 历史局面" : "GRIMOIRE"}</span>
-          <h1>{script.name.zh_hans}</h1>
-          <small>{script.name.en}</small>
+          <span className="eyebrow">{replaying ? t("历史局面") : t("魔典")}</span>
+          <h1>{localize(script.name)}</h1>
         </div>
         <div className="phase-chip">
-          <span>{phaseLabels[game.phase]}</span>
-          {game.phase !== "setup" && <b>第 {game.day_number} 天</b>}
+          <span>{t(phaseLabels[game.phase])}</span>
+          {game.phase !== "setup" && <b>{t("第 {0} 天", [game.day_number])}</b>}
         </div>
         <div className={`validation-chip ${hasError ? "error" : issues.length ? "warning" : "ok"}`}>
           {hasError || issues.length ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
-          {hasError ? "需要修正" : issues.length ? `${issues.length} 条提示` : "局面有效"}
+          {hasError ? t("需要修正") : issues.length ? (issues.length === 1 ? t("1 条提示") : t("{0} 条提示", [issues.length])) : t("局面有效")}
         </div>
       </div>
 
@@ -78,28 +80,27 @@ export function GrimoireBoard({
                 selectedSeatId === seat.id ? "selected" : ""
               } ${seat.alive ? "" : "dead"} ${nextNightSeatIds.includes(seat.id) ? "night-next-seat" : ""}`}
               onClick={() => onSeatClick(seat.id)}
-              aria-label={`${seat.position} 号 ${seat.player_name} ${role?.name.zh_hans ?? "未分配"}${nextNightSeatIds.includes(seat.id) ? " · 夜间下一步" : ""}`}
+              aria-label={t("{0} 号 {1} {2}{3}", [seat.position, seat.player_name, localize(role?.name, t("未分配")), nextNightSeatIds.includes(seat.id) ? t(" · 夜间下一步") : ""])}
             >
-              {nextNightSeatIds.includes(seat.id) && <span className="night-seat-badge"><Moon size={10} /> 下一步</span>}
+              {nextNightSeatIds.includes(seat.id) && <span className="night-seat-badge"><Moon size={10} /> {t("下一步")}</span>}
               <span className="seat-number">{seat.position}</span>
-              <span className="seat-status" aria-label={seat.alive ? "存活" : "死亡"}>
+              <span className="seat-status" aria-label={seat.alive ? t("存活") : t("死亡")}>
                 {seat.alive ? <UserRound size={11} /> : <Skull size={12} />}
               </span>
-              <strong>{seat.player_name || `玩家 ${seat.position}`}</strong>
+              <strong>{seat.player_name || t("玩家 {0}", [seat.position])}</strong>
               <span className="seat-role">
                 {role ? (
                   <>
-                    <b>{role.name.zh_hans}</b>
-                    <small>{role.name.en}</small>
+                    <b>{localize(role.name)}</b>
                   </>
                 ) : (
-                  <em>未分配角色</em>
+                  <em>{t("未分配角色")}</em>
                 )}
               </span>
               {seat.markers.length > 0 && (
                 <span className="seat-markers">
                   {seat.markers.slice(0, 2).map((item) => (
-                    <i key={item.id}>{item.label}</i>
+                    <i key={item.id}>{localizedMarker(item, language)}</i>
                   ))}
                   {seat.markers.length > 2 && <i>+{seat.markers.length - 2}</i>}
                 </span>
@@ -110,24 +111,24 @@ export function GrimoireBoard({
 
         <div className="board-center">
           <span className="clock-hand" aria-hidden="true" />
-          <span className="center-kicker">{replaying ? "REPLAY" : "CURRENT STATE"}</span>
+          <span className="center-kicker">{replaying ? t("历史局面") : t("当前状态")}</span>
           <strong>
             {assignedTotal}<small> / {game.player_count}</small>
           </strong>
-          <span>角色已落位</span>
+          <span>{t("角色已落位")}</span>
           {selectedRoleId ? (
             <p className="assignment-hint active">
-              <MousePointer2 size={13} /> 点击座位分配
-              <b>{roleById.get(selectedRoleId)?.name.zh_hans}</b>
+              <MousePointer2 size={13} /> {t("点击座位分配")}
+              <b>{localize(roleById.get(selectedRoleId)?.name)}</b>
             </p>
           ) : (
-            <p className="assignment-hint">{replaying ? "正在回放 · 点击玩家查看当时状态" : "先在左侧选择角色，或直接检查玩家"}</p>
+            <p className="assignment-hint">{replaying ? t("正在回放 · 点击玩家查看当时状态") : t("先在左侧选择角色，或直接检查玩家")}</p>
           )}
         </div>
       </div>
 
       <div className="board-footer">
-        <span>顺时针座次 · 点击座位检查</span>
+        <span>{t("顺时针座次 · 点击座位检查")}</span>
         <div className="issue-ticker">
           {issues[0] ? (
             <>
@@ -135,7 +136,7 @@ export function GrimoireBoard({
             </>
           ) : (
             <>
-              <CheckCircle2 size={12} /> 配比与座位结构已通过本地校验
+              <CheckCircle2 size={12} /> {t("配比与座位结构已通过本地校验")}
             </>
           )}
         </div>

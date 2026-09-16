@@ -1,3 +1,4 @@
+import { localizedText, translate, type Language } from "./language.ts";
 import type {
   Composition,
   GameDraft,
@@ -85,11 +86,11 @@ export function suggestedComposition(
   };
 }
 
-export function newSeat(position: number): Seat {
+export function newSeat(position: number, language: Language = "zh_hans"): Seat {
   return {
     id: crypto.randomUUID(),
     position,
-    player_name: `玩家 ${position}`,
+    player_name: translate(language, "玩家 {0}", [position]),
     role_id: null,
     shown_role_id: null,
     shown_alignment: "unknown",
@@ -103,14 +104,14 @@ export function newSeat(position: number): Seat {
   };
 }
 
-export function createDraft(script: Script, playerCount = 7): GameDraft {
+export function createDraft(script: Script, playerCount = 7, language: Language = "zh_hans"): GameDraft {
   return {
     schema_version: 1,
-    name: `${script.name.zh_hans ?? script.name.en} · 新局`,
+    name: `${localizedText(script.name, language)} · ${translate(language, "新局")}`,
     script_id: script.id,
     player_count: playerCount,
     composition: suggestedComposition(playerCount),
-    seats: Array.from({ length: playerCount }, (_, index) => newSeat(index + 1)),
+    seats: Array.from({ length: playerCount }, (_, index) => newSeat(index + 1, language)),
     phase: "setup",
     day_number: 0,
     notes: "",
@@ -119,12 +120,12 @@ export function createDraft(script: Script, playerCount = 7): GameDraft {
   };
 }
 
-export function resizeSeats(seats: Seat[], playerCount: number): Seat[] {
+export function resizeSeats(seats: Seat[], playerCount: number, language: Language = "zh_hans"): Seat[] {
   const next = seats.slice(0, playerCount).map((seat, index) => ({
     ...seat,
     position: index + 1,
   }));
-  while (next.length < playerCount) next.push(newSeat(next.length + 1));
+  while (next.length < playerCount) next.push(newSeat(next.length + 1, language));
   return next;
 }
 
@@ -165,7 +166,8 @@ export function compositionTotal(composition: Composition): number {
   );
 }
 
-export function validateDraft(game: GameDraft, script: Script): ValidationIssue[] {
+export function validateDraft(game: GameDraft, script: Script, language: Language = "zh_hans"): ValidationIssue[] {
+  const t = (message: string, values?: readonly (string | number)[]) => translate(language, message, values);
   const issues: ValidationIssue[] = [];
   const availableRoles = allRoles(script);
   const roleById = new Map(availableRoles.map((role) => [role.id, role]));
@@ -174,18 +176,18 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
   const duplicates = new Map<string, number>();
 
   if (compositionTotal(game.composition) !== game.player_count) {
-    issues.push({ level: "error", message: "角色配比总数与玩家数不一致" });
+    issues.push({ level: "error", message: t("角色配比总数与玩家数不一致") });
   }
   for (const seat of game.seats) {
     if (seat.role_id && !roleById.has(seat.role_id)) {
-      issues.push({ level: "error", message: `${seat.player_name} 的角色不属于当前剧本` });
+      issues.push({ level: "error", message: t("{0} 的角色不属于当前剧本", [seat.player_name]) });
     }
     if (seat.role_id) duplicates.set(seat.role_id, (duplicates.get(seat.role_id) ?? 0) + 1);
     if (seat.shown_role_id && !roleById.has(seat.shown_role_id)) {
-      issues.push({ level: "error", message: `${seat.player_name} 的展示角色不属于当前剧本` });
+      issues.push({ level: "error", message: t("{0} 的展示角色不属于当前剧本", [seat.player_name]) });
     }
     if (seat.role_id === "drunk" && roleById.get(seat.shown_role_id ?? "")?.team !== "townsfolk") {
-      issues.push({ level: "warning", message: `${seat.player_name} 的酒鬼身份需要另行设置展示的镇民角色` });
+      issues.push({ level: "warning", message: t("{0} 的酒鬼身份需要另行设置展示的镇民角色", [seat.player_name]) });
     }
   }
   for (const [roleId, count] of duplicates) {
@@ -193,12 +195,12 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
       const role = roleById.get(roleId);
       issues.push({
         level: "warning",
-        message: `${role?.name.zh_hans ?? roleId} 被分配了 ${count} 次`,
+        message: t("{0} 被分配了 {1} 次", [localizedText(role?.name, language, roleId), count]),
       });
     }
   }
   if (unassigned > 0) {
-    issues.push({ level: "warning", message: `还有 ${unassigned} 个座位未分配角色` });
+    issues.push({ level: "warning", message: t("还有 {0} 个座位未分配角色", [unassigned]) });
   }
   const targets: Array<[Team, number]> = [
     ["townsfolk", game.composition.townsfolk],
@@ -211,7 +213,7 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
     if (counts[team] > target) {
       issues.push({
         level: "warning",
-        message: `${TEAM_LABELS[team]}已分配 ${counts[team]}，超过配比 ${target}`,
+        message: t("{0}已分配 {1}，超过配比 {2}", [translate(language, TEAM_LABELS[team]), counts[team], target]),
       });
     }
   }
@@ -221,7 +223,7 @@ export function validateDraft(game: GameDraft, script: Script): ValidationIssue[
   for (const role of setupRoles) {
     issues.push({
       level: "warning",
-      message: `${role.name.zh_hans} 的配置影响：${role.setup_effect.zh_hans ?? role.ability.zh_hans}`,
+      message: t("{0} 的配置影响：{1}", [localizedText(role.name, language), localizedText(role.setup_effect, language, localizedText(role.ability, language))]),
     });
   }
   return issues;
@@ -239,6 +241,6 @@ export function hasSeatData(seat: Seat): boolean {
       !seat.alive ||
       !seat.dead_vote_available ||
       seat.alignment !== "unknown" ||
-      seat.player_name !== `玩家 ${seat.position}`,
+      (seat.player_name !== `玩家 ${seat.position}` && seat.player_name !== `Player ${seat.position}`),
   );
 }

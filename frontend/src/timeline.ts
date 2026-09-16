@@ -45,6 +45,29 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
   if (!same(before.composition, after.composition)) changes.push("调整角色配比");
   if (before.notes !== after.notes) addText("notes", "更新全局备注");
   if (before.public_information !== after.public_information) addText("public_information", "更新公开信息");
+
+  if (!same(before.night_checklist ?? null, after.night_checklist ?? null)) {
+    const old = before.night_checklist;
+    const next = after.night_checklist;
+    if (next && old?.id !== next.id) changes.push(`建立${phaseLabel(next)}清单`);
+    else if (old && next) {
+      if (!same(old.steps.map((step) => step.id), next.steps.map((step) => step.id))) {
+        changes.push("调整夜间步骤");
+      }
+      for (const step of next.steps) {
+        const previous = old.steps.find((item) => item.id === step.id);
+        if (!previous) continue;
+        if (previous.status !== step.status) {
+          const label = { pending: "重新打开", completed: "完成", skipped: "跳过" };
+          changes.push(`${label[step.status]}夜间步骤：${step.title}`);
+        }
+        for (const [field, label] of [["choice", "玩家选择"], ["information", "收到的信息"], ["decision", "说书人决定"]] as const) {
+          if (previous[field] !== step[field]) addText(`night.${step.id}.${field}`, `${step.title}：记录${label}`);
+        }
+      }
+      if (!same(old.reviewed_effects, next.reviewed_effects)) changes.push("核对夜间持续效果");
+    } else changes.push("更新夜间清单");
+  }
   const alignments = { good: "善良", evil: "邪恶", unknown: "未知" };
   for (const seat of after.seats) {
     const previous = before.seats.find((item) => item.id === seat.id);

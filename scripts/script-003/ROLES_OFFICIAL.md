@@ -2,7 +2,7 @@
 
 > 本页由 `backend/tools/sync_official_data.py` 生成。英文来自 TPI 官方角色数据，
 > 简体中文来自 TPI 官方 `zh_Hans` 翻译；未进行自行翻译或润色。
-> 检索日期：**2026-08-31**。来源与维护说明见 [reference/README.md](reference/README.md)。
+> 检索日期：**2026-09-16**。来源与维护说明见 [reference/README.md](reference/README.md)。
 > 主剧本角色 **25** 名；另列本版本的 **5** 名官方旅行者。
 
 ## 镇民 / Townsfolk

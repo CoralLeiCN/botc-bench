@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.models import GameDraft
+from backend.app.models import GameDraft, NightChecklist, NightStep
 from backend.app.services.codex_harness import CodexHarness, PromptChanged
 from backend.app.services.player_view import build_player_view
 from backend.tests.test_api import draft_payload
@@ -110,6 +110,22 @@ def test_missing_shown_role_never_falls_back_to_actual_role() -> None:
     assert view.you.shown_alignment == "unknown"
     with pytest.raises(ValueError, match="not present"):
         build_player_view(game, "missing-seat")
+
+
+def test_night_checklist_does_not_expose_unreleased_information_or_decisions() -> None:
+    game = knowledge_game()
+    before = harness().preview(game, "Question", "seat-1", "player")
+    game.night_checklist = NightChecklist(
+        id="night-1", script_id=game.script_id, phase="first_night", day_number=1,
+        steps=[NightStep(
+            id="step-1", seat_id="seat-1", instruction_id="empath", title="SECRET_NIGHT_TITLE",
+            information="SECRET_UNRELEASED_INFORMATION", decision="SECRET_DRUNK_DECISION",
+            choice="SECRET_CHOICE",
+        )],
+        reviewed_effects=["SECRET_EFFECT"],
+    )
+    assert harness().preview(game, "Question", "seat-1", "player") == before
+    assert "SECRET_DRUNK_DECISION" in harness().build_prompt(game, "Question", "seat-1")
 
 
 def test_preview_is_exact_cli_input_and_changed_preview_never_launches(tmp_path: Path) -> None:

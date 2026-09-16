@@ -1,3 +1,4 @@
+import { localizedText, translate, type Language } from "./language.ts";
 import type { GameDraft, Marker, NightChecklist, NightPhase, NightStep, Script } from "./types";
 
 export function isCurrentNight(game: GameDraft): boolean {
@@ -134,4 +135,21 @@ export function canFinishNight(game: GameDraft): boolean {
 
 export function finishNight(game: GameDraft): GameDraft {
   return canFinishNight(game) ? { ...game, phase: "day" } : game;
+}
+
+/** Translate generated titles for display while preserving custom titles and saved records. */
+export function nightStepTitle(step: NightStep, game: GameDraft, script: Script, language: Language): string {
+  const instruction = script.night_order?.[game.night_checklist?.phase ?? "first_night"]
+    ?.find((item) => item.id === step.instruction_id);
+  if (!instruction) return step.title === "说书人：确认夜间行动顺序"
+    ? translate(language, step.title) : step.title;
+  const seat = game.seats.find((item) => item.id === step.seat_id);
+  const names = [instruction.name.zh_hans, instruction.name.en].filter(Boolean);
+  for (const name of names) {
+    if (!step.seat_id && step.title === name) return localizedText(instruction.name, language);
+    if (seat && step.title === `${seat.player_name || `${seat.position} 号`} · ${name}`) {
+      return `${seat.player_name || translate(language, "{0} 号玩家", [seat.position])} · ${localizedText(instruction.name, language)}`;
+    }
+  }
+  return step.title;
 }

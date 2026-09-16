@@ -1,3 +1,4 @@
+import { useLanguage } from "../LanguageProvider";
 import {
   AlertCircle,
   BookMarked,
@@ -59,6 +60,7 @@ export function CodexPanel({
   onAsk,
   onOpenNight,
 }: CodexPanelProps) {
+  const { t, localize, language, locale } = useLanguage();
   const submit = async () => {
     const value = question.trim();
     if (!value || !preview || busy || disabled || !status?.available) return;
@@ -72,31 +74,31 @@ export function CodexPanel({
           <Sparkles size={16} />
         </div>
         <div>
-          <span className="eyebrow">LOCAL CODEX HARNESS</span>
-          <h2>{playerMode ? "玩家代理" : "说书人辅助"}</h2>
+          <span className="eyebrow">{t("本地 Codex")}</span>
+          <h2>{playerMode ? t("玩家代理") : t("说书人辅助")}</h2>
         </div>
         <span className={`status-dot ${status?.available ? "online" : "offline"}`}>
-          {status?.available ? "只读可用" : "不可用"}
+          {status?.available ? t("只读可用") : t("不可用")}
         </span>
       </div>
 
       <div className="context-line">
         <ShieldCheck size={12} />
-        <span>{script.name.zh_hans}</span>
+        <span>{localize(script.name)}</span>
         <i>·</i>
-        <span>{selectedSeat ? `${selectedSeat.position} 号 ${selectedSeat.player_name}` : "未选玩家"}</span>
+        <span>{selectedSeat ? t("{0} 号 {1}", [selectedSeat.position, selectedSeat.player_name]) : t("未选玩家")}</span>
       </div>
 
       <div className="quick-prompts">
-        {!playerMode && onOpenNight && <button type="button" onClick={onOpenNight}>今晚清单</button>}
+        {!playerMode && onOpenNight && <button type="button" onClick={onOpenNight}>{t("今晚清单")}</button>}
         {(playerMode ? playerQuestions : quickQuestions).map(([label, prompt]) => (
           <button
             type="button"
-            key={label}
+            key={t(label)}
             disabled={busy || disabled}
-            onClick={() => onQuestionChange(prompt)}
+            onClick={() => onQuestionChange(t(prompt))}
           >
-            {label}
+           {t(label)}
           </button>
         ))}
       </div>
@@ -110,8 +112,8 @@ export function CodexPanel({
           }}
           maxLength={4000}
           rows={3}
-          aria-label={playerMode ? "玩家问题" : "说书人问题"}
-          placeholder={playerMode ? "根据我已知的信息，询问线索、声明或下一步行动…" : "询问配比、角色互动、夜间结算或局面矛盾…"}
+          aria-label={playerMode ? t("玩家问题") : t("说书人问题")}
+          placeholder={playerMode ? t("根据我已知的信息，询问线索、声明或下一步行动…") : t("询问配比、角色互动、夜间结算或局面矛盾…")}
         />
         <button
           type="button"
@@ -119,22 +121,22 @@ export function CodexPanel({
           disabled={!question.trim() || !preview || busy || disabled || !status?.available}
         >
           {busy ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-          {busy ? "推理中" : "触发本地 Codex"}
+          {busy ? t("推理中") : t("触发本地 Codex")}
         </button>
       </label>
 
       <details className="input-preview" open={playerMode}>
-        <summary>代理输入预览 · 完整提示词</summary>
-        <p>以下包含固定参考资料、可见局面与问题，将原样作为本次 Codex 调用的输入。</p>
-        {preview ? <pre aria-label="完整代理输入">{preview.prompt}</pre> : (
-          <p role="status">{previewError ?? "正在生成输入预览…"}</p>
+        <summary>{t("代理输入预览 · 完整提示词")}</summary>
+        <p>{t("以下包含固定参考资料、可见局面与问题，将原样作为本次 Codex 调用的输入。")}</p>
+        {preview ? <pre aria-label={t("完整代理输入")}>{preview.prompt}</pre> : (
+          <p role="status">{previewError ?? t("正在生成输入预览…")}</p>
         )}
-        <button type="button" onClick={onRefreshPreview} disabled={busy || disabled}>刷新预览</button>
+        <button type="button" onClick={onRefreshPreview} disabled={busy || disabled}>{t("刷新预览")}</button>
       </details>
 
       {!status?.available && (
         <div className="harness-message muted">
-          <AlertCircle size={13} /> {status?.detail ?? "正在检测本地 Codex CLI…"}
+          <AlertCircle size={13} /> {status?.detail ?? t("正在检测本地 Codex CLI…")}
         </div>
       )}
       {error && (
@@ -145,7 +147,7 @@ export function CodexPanel({
       {(answer || busy) && (
         <article className="codex-answer" aria-live="polite">
           <header>
-            <Sparkles size={13} /> Codex 分析
+            <Sparkles size={13} /> {t("Codex 分析")}
           </header>
           {busy && !answer ? (
             <div className="answer-loading">
@@ -160,20 +162,20 @@ export function CodexPanel({
       )}
 
       {!playerMode && <div className="saved-analyses">
-        <h3>已保存分析 <span>{analyses.length}</span></h3>
-        {!analyses.length && <p>分析完成后自动附在原始局面快照上。</p>}
+        <h3>{t("已保存分析")} <span>{analyses.length}</span></h3>
+        {!analyses.length && <p>{t("分析完成后自动附在原始局面快照上。")}</p>}
         {[...analyses].reverse().map((analysis) => {
           const seat = analysis.snapshot.seats.find((item) => item.id === analysis.selected_seat_id);
           return <details key={analysis.id} className="saved-analysis">
             <summary>{analysis.question}</summary>
             <div className="analysis-meta">
-              <time dateTime={analysis.created_at}>{new Date(analysis.created_at).toLocaleString("zh-CN")}</time>
-              <span>{analysis.snapshot.name} · {phaseLabel(analysis.snapshot)} · {analysis.perspective === "player" ? "玩家分析" : "说书人分析"}</span>
-              <span>{seat ? `${seat.position} 号 ${seat.player_name}` : "未选玩家"} · {(analysis.duration_ms / 1000).toFixed(1)} 秒</span>
+              <time dateTime={analysis.created_at}>{new Date(analysis.created_at).toLocaleString(locale)}</time>
+              <span>{analysis.snapshot.name} · {phaseLabel(analysis.snapshot, language)} · {analysis.perspective === "player" ? t("玩家分析") : t("说书人分析")}</span>
+              <span>{seat ? t("{0} 号 {1}", [seat.position, seat.player_name]) : t("未选玩家")} · {(analysis.duration_ms / 1000).toFixed(1)} {t("秒")}</span>
               {analysis.model && <span>{analysis.model}</span>}
-              <span>{currentEventId === analysis.event_id ? "当前显示的快照" : "来自历史快照"} · AI 分析，非官方裁定</span>
+              <span>{currentEventId === analysis.event_id ? t("当前显示的快照") : t("来自历史快照")} {t("· AI 分析，非官方裁定")}</span>
             </div>
-            <button type="button" disabled={disabled} onClick={() => onViewSnapshot(analysis)}>查看原始局面</button>
+            <button type="button" disabled={disabled} onClick={() => onViewSnapshot(analysis)}>{t("查看原始局面")}</button>
             <pre>{analysis.answer}</pre>
           </details>;
         })}
@@ -181,10 +183,11 @@ export function CodexPanel({
 
       <div className="source-links">
         <a href={`/api/scripts/${script.id}/qa`} target="_blank" rel="noreferrer">
-          <BookMarked size={12} /> 本地问答整理
+          <BookMarked size={12} /> {t("本地问答整理")}
         </a>
         <a href={script.sources.edition} target="_blank" rel="noreferrer">
-          官方剧本页 ↗
+
+         {t("官方剧本页 ↗")}
         </a>
       </div>
     </section>

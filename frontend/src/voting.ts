@@ -1,9 +1,10 @@
+import { translate, type Language } from "./language.ts";
 import type { GameDraft, IndividualVote, Nomination, PlayerRef, Script, Seat } from "./types";
 
 // Standard-rule implementation sources and verification date: reference/voting-sources.json.
 
 const playerRef = ({ id, position, player_name }: Seat): PlayerRef => ({ id, position, player_name });
-export const playerLabel = (player: PlayerRef) => `${player.position} 号 ${player.player_name}`;
+export const playerLabel = (player: PlayerRef, language: Language = "zh_hans") => translate(language, "{0} 号 {1}", [player.position, player.player_name]);
 export const voteTotal = (nomination: Nomination) => nomination.votes
   .reduce((total, vote) => total + (vote.choice === "yes" ? vote.weight : 0), 0);
 export const currentNominations = (game: GameDraft) => game.nominations

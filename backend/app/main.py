@@ -178,9 +178,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/api/reason/preview", response_model=ReasonPreview)
     def preview_reason(payload: ReasonPreviewRequest) -> ReasonPreview:
         validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
             return harness.preview(
-                payload.game, payload.question, payload.selected_seat_id, payload.perspective
+                payload.game, payload.question, payload.selected_seat_id, payload.perspective,
+                timeline=payload.timeline,
             )
         except HarnessFailed as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -188,10 +191,13 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/api/reason", response_model=ReasonResponse)
     async def reason(payload: ReasonRequest) -> ReasonResponse:
         validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
             return await harness.reason(
                 payload.game, payload.question, payload.selected_seat_id,
                 payload.perspective, payload.expected_prompt_sha256,
+                timeline=payload.timeline,
             )
         except PromptChanged as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc

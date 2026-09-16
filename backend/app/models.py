@@ -90,6 +90,7 @@ class Seat(StrictModel):
     public_claim: str = Field(default="", max_length=2000)
     private_information: str = Field(default="", max_length=5000)
     alive: bool = True
+    dead_vote_available: bool = True
     alignment: Literal["good", "evil", "unknown"] = "unknown"
     markers: List[Marker] = Field(default_factory=list, max_length=32)
     notes: str = Field(default="", max_length=2000)
@@ -106,6 +107,48 @@ class Composition(StrictModel):
     @property
     def total(self) -> int:
         return self.townsfolk + self.outsider + self.minion + self.demon + self.traveller
+
+
+class PlayerRef(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    position: int = Field(ge=1, le=20)
+    player_name: str = Field(default="", max_length=80)
+
+
+class IndividualVote(StrictModel):
+    player: PlayerRef
+    choice: Literal["pending", "yes", "no"] = "pending"
+    weight: int = Field(default=1, ge=-20, le=20, strict=True)
+    dead_vote: bool = False
+
+    @model_validator(mode="after")
+    def validate_vote(self) -> "IndividualVote":
+        if self.choice != "yes" and (self.dead_vote or self.weight != 1):
+            raise ValueError("only yes votes can consume dead votes or have custom weight")
+        return self
+
+
+class Nomination(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    day_number: int = Field(ge=0, le=99)
+    nominator: PlayerRef
+    nominee: PlayerRef
+    status: Literal["open", "closed", "cancelled"] = "open"
+    alive_count: int = Field(ge=0, le=20)
+    votes: List[IndividualVote] = Field(min_length=5, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_ballot(self) -> "Nomination":
+        ids = [vote.player.id for vote in self.votes]
+        if len(ids) != len(set(ids)):
+            raise ValueError("voters must be unique")
+        if self.nominator.id not in ids or self.nominee.id not in ids:
+            raise ValueError("nomination participants must belong to the ballot roster")
+        if self.alive_count > len(ids):
+            raise ValueError("alive count must not exceed the ballot roster")
+        if self.status == "closed" and any(v.choice == "pending" for v in self.votes):
+            raise ValueError("closed ballots must record every individual vote")
+        return self
 
 
 class NightStep(StrictModel):
@@ -151,6 +194,7 @@ class GameSnapshot(StrictModel):
     phase: Literal["setup", "first_night", "day", "night", "finished"] = "setup"
     day_number: int = Field(default=0, ge=0, le=99)
     notes: str = Field(default="", max_length=5000)
+    nominations: List[Nomination] = Field(default_factory=list, max_length=2000)
     public_information: str = Field(default="", max_length=5000)
 
     night_checklist: Optional[NightChecklist] = None
@@ -165,6 +209,26 @@ class GameSnapshot(StrictModel):
         ids = [seat.id for seat in self.seats]
         if len(ids) != len(set(ids)):
             raise ValueError("seat ids must be unique")
+        nomination_ids = [nomination.id for nomination in self.nominations]
+        if len(nomination_ids) != len(set(nomination_ids)):
+            raise ValueError("nomination ids must be unique")
+        active = [n for n in self.nominations if n.status == "open"]
+        if len(active) > 1:
+            raise ValueError("only one ballot may be open")
+        if active:
+            ballot = active[0]
+            if self.phase != "day" or ballot.day_number != self.day_number:
+                raise ValueError("open ballot must belong to the current day")
+            if {v.player.id for v in ballot.votes} != set(ids):
+                raise ValueError("open ballot roster must match current seats")
+            seats = {seat.id: seat for seat in self.seats}
+            for vote in ballot.votes:
+                seat = seats[vote.player.id]
+                if vote.choice == "yes" and (
+                    vote.dead_vote != (not seat.alive)
+                    or (vote.dead_vote and not seat.dead_vote_available)
+                ):
+                    raise ValueError("open ballot has an unavailable or inconsistent dead vote")
         return self
 
 
@@ -291,7 +355,21 @@ class ReasonPreviewRequest(StrictModel):
     game: GameSnapshot
     question: str = Field(default="", max_length=4000)
     selected_seat_id: Optional[str] = Field(default=None, max_length=80)
+    timeline: Optional[List[TimelineEntry]] = Field(default=None, max_length=20000)
     perspective: Literal["storyteller", "player"] = "storyteller"
+
+    @model_validator(mode="after")
+    def validate_evidence(self) -> "ReasonPreviewRequest":
+        if self.timeline is not None:
+            if (
+                not self.timeline
+                or self.timeline[-1].snapshot.model_dump() != self.game.model_dump()
+            ):
+                raise ValueError("reasoning timeline must end at the supplied game state")
+            ids = [event.id for event in self.timeline]
+            if len(ids) != len(set(ids)):
+                raise ValueError("timeline event ids must be unique")
+        return self
 
     @model_validator(mode="after")
     def validate_viewer(self) -> "ReasonPreviewRequest":

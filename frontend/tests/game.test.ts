@@ -15,6 +15,7 @@ function seat(patch: Partial<Seat> = {}): Seat {
     public_claim: "",
     private_information: "",
     alive: true,
+    dead_vote_available: true,
     alignment: "unknown",
     markers: [],
     notes: "",

@@ -2126,6 +2126,48 @@ select {
   .timeline-detail-row { padding-block: 6px; }
 }
 
+.app-shell { grid-template-rows: 76px minmax(0, 1fr) auto auto; }
+.voting-panel { overflow: hidden; }
+.app-shell:has(.voting-body) .seat-card {
+  top: clamp(48px, var(--seat-y), calc(100% - 48px));
+  left: clamp(62px, var(--seat-x), calc(100% - 62px));
+}
+.voting-heading {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 39px;
+  padding: 8px 13px; border: 0; background: transparent; text-align: left; font-size: 11px;
+}
+.voting-heading > svg, .execution-standing { color: var(--accent); }
+.execution-standing { flex: 1; }
+.voting-heading > span:not(.execution-standing) { color: var(--muted); }
+.voting-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); border-top: 1px solid var(--line); max-height: 36vh; overflow: auto; }
+.voting-ballot, .nomination-history { padding: 12px; min-width: 0; }
+.nomination-history { border-left: 1px solid var(--line); font-size: 11px; }
+.nomination-history > strong { color: var(--muted); }
+.nomination-history details { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.nomination-history summary { cursor: pointer; overflow-wrap: anywhere; }
+.nomination-history summary span { display: block; margin-top: 4px; color: var(--accent); }
+.nomination-history ul { padding-left: 20px; line-height: 1.7; color: var(--muted); }
+.voting-controls { border: 0; margin: 0; padding: 0; min-width: 0; }
+.nomination-form, .ballot-actions { display: flex; align-items: end; gap: 9px; }
+.nomination-form label { display: grid; gap: 5px; flex: 1; min-width: 0; color: var(--muted); font-size: 11px; }
+.voting-panel select { padding: 6px; min-width: 0; font-size: 11px; }
+.voting-panel button:not(.voting-heading) { display: inline-flex; align-items: center; gap: 4px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-soft); font-size: 11px; white-space: nowrap; }
+.voting-panel button.complete-ballot { color: var(--accent); border-color: var(--accent); }
+.voting-help, .nomination-history > p { margin: 9px 0 0; font-size: 10px; color: var(--muted); line-height: 1.6; }
+.ballot-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 11px; margin-bottom: 10px; }
+.ballot-summary span { color: var(--accent); }
+.individual-votes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 14px; margin-bottom: 12px; }
+.individual-vote { display: flex; gap: 5px; align-items: center; min-width: 0; font-size: 11px; }
+.individual-vote > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.individual-vote input { width: 45px; padding: 5px 2px 5px 5px; font-size: 11px; }
+.dead-vote-list { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 10px; color: var(--faint); }
+.dead-vote-list .available { color: var(--success); }
+.dead-vote-list .spent { color: var(--muted); }
+.dead-vote-toggle { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+.dead-vote-toggle input { accent-color: var(--accent); }
+@media (max-height: 760px) {
+  .app-shell { grid-template-rows: 70px minmax(0, 1fr) auto auto; }
+}
 /* Explicit knowledge and the isolated player preview. */
 .view-as-button, .perspective-toolbar button, .input-preview button {
   display: inline-flex;

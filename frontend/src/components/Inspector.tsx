@@ -152,6 +152,12 @@ export function Inspector({
             </button>
           </div>
 
+          {!seat.alive && <label className="dead-vote-toggle">
+            <input type="checkbox" checked={seat.dead_vote_available}
+              onChange={(event) => onSeatChange({ ...seat, dead_vote_available: event.target.checked })} />
+            亡者票可用（剩余 {seat.dead_vote_available ? 1 : 0} 票）
+          </label>}
+
           {role && (
             <article className={`ability-card ${role.team}`}>
               <div>

@@ -6,6 +6,7 @@ import type {
   HarnessStatus,
   ReasonResponse,
   Script,
+  TimelineEntry,
 } from "./types";
 
 export class ApiFailure extends Error {
@@ -57,13 +58,14 @@ export const api = {
       body: JSON.stringify({ event_id: eventId, expected_version: version }),
     }),
   harnessStatus: () => request<HarnessStatus>("/api/harness/status"),
-  reason: (game: GameDraft, question: string, selectedSeatId: string | null) =>
+  reason: (game: GameDraft, question: string, selectedSeatId: string | null, timeline: TimelineEntry[]) =>
     request<ReasonResponse>("/api/reason", {
       method: "POST",
       body: JSON.stringify({
         game,
         question,
         selected_seat_id: selectedSeatId,
+        timeline,
       }),
     }),
 };

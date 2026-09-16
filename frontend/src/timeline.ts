@@ -1,4 +1,5 @@
 import type { GameDraft, Script, TimelineEntry } from "./types";
+import { executionStanding, playerLabel, voteTotal } from "./voting.ts";
 
 export function phaseLabel(game: Pick<GameDraft, "phase" | "day_number">): string {
   if (game.phase === "setup") return "配置中";
@@ -44,6 +45,28 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
   }
   if (!same(before.composition, after.composition)) changes.push("调整角色配比");
   if (before.notes !== after.notes) addText("notes", "更新全局备注");
+  for (const nomination of after.nominations) {
+    const previous = before.nominations.find((n) => n.id === nomination.id);
+    const label = `${playerLabel(nomination.nominator)} 提名 ${playerLabel(nomination.nominee)}`;
+    if (!previous) changes.push(`提名：${label}`);
+    else {
+      for (const vote of nomination.votes) {
+        const old = previous.votes.find((v) => v.player.id === vote.player.id);
+        if (!same(old, vote)) changes.push(`${playerLabel(vote.player)} → ${playerLabel(nomination.nominee)}：${
+          vote.choice === "yes" ? `投票（${vote.weight} 票${vote.dead_vote ? "，亡者票" : ""}）` :
+          vote.choice === "no" ? "未投票" : "改为未记录"
+        }`);
+      }
+      if (previous.status !== nomination.status) changes.push(nomination.status === "closed"
+        ? `投票结束：${label}，${voteTotal(nomination)} 票 / 门槛 ${Math.ceil(nomination.alive_count / 2)}`
+        : `取消投票：${label}`);
+    }
+  }
+  const oldStanding = executionStanding(before);
+  const standing = executionStanding(after);
+  if (!same(oldStanding, standing)) changes.push(standing.candidate
+    ? `待处决：${playerLabel(standing.candidate)}（${standing.high} 票）`
+    : standing.tied ? `最高票平票（${standing.high} 票），无人待处决` : "无人待处决");
   const alignments = { good: "善良", evil: "邪恶", unknown: "未知" };
   for (const seat of after.seats) {
     const previous = before.seats.find((item) => item.id === seat.id);
@@ -55,6 +78,7 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
     if (previous.position !== seat.position) changes.push(`${seat.player_name}：${previous.position} → ${seat.position} 号座位`);
     if (previous.role_id !== seat.role_id) changes.push(`${name}：${roleName(previous.role_id)} → ${roleName(seat.role_id)}`);
     if (previous.alive !== seat.alive) changes.push(`${name} ${seat.alive ? "复活" : "死亡"}`);
+    if (previous.dead_vote_available !== seat.dead_vote_available) changes.push(`${name}：亡者票${seat.dead_vote_available ? "恢复" : "已用"}`);
     if (previous.alignment !== seat.alignment) changes.push(`${name} 阵营：${alignments[previous.alignment]} → ${alignments[seat.alignment]}`);
     if (previous.notes !== seat.notes) addText(`${seat.id}.notes`, `${name}：更新玩家备注`);
     for (const marker of seat.markers) {

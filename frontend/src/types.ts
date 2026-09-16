@@ -61,6 +61,7 @@ export interface Seat {
   player_name: string;
   role_id: string | null;
   alive: boolean;
+  dead_vote_available: boolean;
   alignment: Alignment;
   markers: Marker[];
   notes: string;
@@ -85,6 +86,32 @@ export interface GameDraft {
   phase: GamePhase;
   day_number: number;
   notes: string;
+  nominations: Nomination[];
+}
+
+export interface PlayerRef {
+  id: string;
+  position: number;
+  player_name: string;
+}
+
+export interface IndividualVote {
+  player: PlayerRef;
+  choice: "pending" | "yes" | "no";
+  /** Counted contribution; zero or negative weights can record character effects. */
+  weight: number;
+  /** Reserved while open, consumed on completion, released on cancellation. */
+  dead_vote: boolean;
+}
+
+export interface Nomination {
+  id: string;
+  day_number: number;
+  nominator: PlayerRef;
+  nominee: PlayerRef;
+  status: "open" | "closed" | "cancelled";
+  alive_count: number;
+  votes: IndividualVote[];
 }
 
 export interface GameWrite extends GameDraft {

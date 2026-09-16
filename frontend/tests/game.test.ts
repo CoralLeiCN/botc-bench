@@ -11,6 +11,7 @@ function seat(patch: Partial<Seat> = {}): Seat {
     player_name: "玩家 5",
     role_id: null,
     alive: true,
+    dead_vote_available: true,
     alignment: "unknown",
     markers: [],
     notes: "",

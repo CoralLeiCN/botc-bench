@@ -7,6 +7,8 @@ import { Inspector } from "./components/Inspector";
 import { RolePalette } from "./components/RolePalette";
 import { Timeline } from "./components/Timeline";
 import { Toolbar } from "./components/Toolbar";
+import { VotingTracker } from "./components/VotingTracker";
+import { votingEditError } from "./voting";
 import {
   allRoles,
   compositionTotal,
@@ -109,6 +111,10 @@ export default function App() {
   const updateGame = useCallback(
     (updater: (current: GameDraft) => GameDraft) => {
       if (replaying || branchingRef.current) return;
+      if (game) {
+        const error = votingEditError(game, updater(game));
+        if (error) { setNotice(error); return; }
+      }
       gameRevisionRef.current += 1;
       invalidateCodexContext();
       const metadata = { id: crypto.randomUUID(), recorded_at: new Date().toISOString() };
@@ -122,7 +128,7 @@ export default function App() {
       setDirty(true);
       setNotice(null);
     },
-    [invalidateCodexContext, replaying, scripts],
+    [game, invalidateCodexContext, replaying, scripts],
   );
 
   const refreshSavedGames = useCallback(async () => {
@@ -311,7 +317,9 @@ export default function App() {
 
   const changeSeat = (nextSeat: Seat) => {
     updateGame((current) => {
-      const seats = current.seats.map((seat) => (seat.id === nextSeat.id ? nextSeat : seat));
+      const seats = current.seats.map((seat) => (seat.id === nextSeat.id
+        ? { ...nextSeat, dead_vote_available: !seat.alive && nextSeat.alive ? true : nextSeat.dead_vote_available }
+        : seat));
       return {
         ...current,
         seats,
@@ -421,7 +429,8 @@ export default function App() {
     setCodexBusy(true);
     setCodexError(null);
     try {
-      const result = await api.reason(displayedGame, question, selectedSeatId);
+      const result = await api.reason(displayedGame, question, selectedSeatId,
+        timeline.slice(0, replayIndex === null ? timeline.length : replayIndex + 1));
       if (codexContextEpochRef.current === requestContext) {
         setCodexAnswer(result.answer);
       } else {
@@ -443,6 +452,7 @@ export default function App() {
   const addEvent = (note: string) => {
     if (!game || replaying || branchingRef.current || !note.trim()) return;
     gameRevisionRef.current += 1;
+    invalidateCodexContext();
     const entry = createEntry(game, "说书人记录", "note", note.trim());
     setTimeline((current) => [...current, entry]);
     setDirty(true);
@@ -586,6 +596,13 @@ export default function App() {
           />
         </aside>
       </div>
+      <VotingTracker
+        key={`voting-${documentEpochRef.current}`}
+        game={displayedGame}
+        script={script}
+        readOnly={replaying || branching || loadingGame}
+        onChange={updateGame}
+      />
       <Timeline
         key={documentEpochRef.current}
         entries={timeline}

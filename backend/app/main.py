@@ -172,8 +172,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/api/reason", response_model=ReasonResponse)
     async def reason(payload: ReasonRequest) -> ReasonResponse:
         validate_script_roles(payload.game)
+        for event in payload.timeline or []:
+            validate_script_roles(event.snapshot)
         try:
-            return await harness.reason(payload.game, payload.question, payload.selected_seat_id)
+            return await harness.reason(
+                payload.game, payload.question, payload.selected_seat_id, payload.timeline
+            )
         except HarnessUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except HarnessFailed as exc:

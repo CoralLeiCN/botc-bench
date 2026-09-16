@@ -92,6 +92,7 @@ export function newSeat(position: number): Seat {
     player_name: `玩家 ${position}`,
     role_id: null,
     alive: true,
+    dead_vote_available: true,
     alignment: "unknown",
     markers: [],
     notes: "",
@@ -109,6 +110,7 @@ export function createDraft(script: Script, playerCount = 7): GameDraft {
     phase: "setup",
     day_number: 0,
     notes: "",
+    nominations: [],
   };
 }
 
@@ -220,6 +222,7 @@ export function hasSeatData(seat: Seat): boolean {
       seat.markers.length ||
       seat.notes ||
       !seat.alive ||
+      !seat.dead_vote_available ||
       seat.alignment !== "unknown" ||
       seat.player_name !== `玩家 ${seat.position}`,
   );

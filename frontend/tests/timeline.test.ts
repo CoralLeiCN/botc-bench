@@ -9,9 +9,9 @@ function game(): GameDraft {
     composition: { townsfolk: 3, outsider: 0, minion: 1, demon: 1, traveller: 0, manual: false },
     seats: Array.from({ length: 5 }, (_, i) => ({
       id: `seat-${i}`, position: i + 1, player_name: `Player ${i}`, role_id: null,
-      alive: true, alignment: "unknown", markers: [], notes: "",
+      alive: true, dead_vote_available: true, alignment: "unknown", markers: [], notes: "",
     })),
-    phase: "setup", day_number: 0, notes: "",
+    phase: "setup", day_number: 0, notes: "", nominations: [],
   };
 }
 const metadata = (n: number) => ({ id: `event-${n}`, recorded_at: new Date(1700000000000 + n * 100).toISOString() });

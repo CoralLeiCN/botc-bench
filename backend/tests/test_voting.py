@@ -206,3 +206,71 @@ def test_player_preview_ignores_storyteller_timeline_and_ballots(client):
     payload["nominations"] = []
     payload["seats"][-1]["dead_vote_available"] = False
     assert client.post("/api/reason/preview", json=request).json() == baseline.json()
+
+
+def test_saved_analysis_binds_preview_to_historical_ballot_evidence(client, monkeypatch):
+    payload = voting_payload()
+    initial = deepcopy(payload)
+    initial["nominations"][0]["votes"][0]["choice"] = "pending"
+    prefix = [timeline_event(initial, "before-vote"), timeline_event(payload, "after-vote")]
+    payload["notes"] = "UNSEEN_FUTURE_INFORMATION"
+    record = client.post("/api/games", json={
+        **payload, "timeline": [*prefix, timeline_event(payload, "future-event")],
+    }).json()
+    preview_request = {
+        "game": record["timeline"][1]["snapshot"], "question": "Who voted?",
+        "timeline": record["timeline"][:2],
+    }
+    preview = client.post("/api/reason/preview", json=preview_request).json()
+    calls = []
+
+    async def reason(
+        game, question, selected_seat_id, perspective, expected_prompt_sha256, timeline=None,
+    ):
+        actual = client.app.state.harness.preview(
+            game, question, selected_seat_id, perspective, timeline,
+        )
+        assert [event.id for event in timeline] == ["before-vote", "after-vote"]
+        assert actual.prompt == preview["prompt"]
+        assert expected_prompt_sha256 == preview["prompt_sha256"]
+        assert "UNSEEN_FUTURE_INFORMATION" not in actual.prompt
+        assert '"before": "pending", "after": "yes"' in actual.prompt
+        calls.append(actual.prompt_sha256)
+        return ReasonResponse(answer="See after-vote", duration_ms=1)
+
+    monkeypatch.setattr(client.app.state.harness, "reason", reason)
+    url = f"/api/games/{record['id']}/analyses"
+    request = {"event_id": "after-vote", "question": "Who voted?",
+               "expected_prompt_sha256": preview["prompt_sha256"]}
+    analysis = client.post(url, json=request)
+    assert analysis.status_code == 201, analysis.text
+    assert analysis.json()["snapshot"] == record["timeline"][1]["snapshot"]
+    assert analysis.json()["prompt_sha256"] == preview["prompt_sha256"]
+    preview_request["timeline"][0]["note"] = "Changed evidence"
+    different = client.post("/api/reason/preview", json=preview_request).json()
+    assert client.post(url, json={
+        **request, "expected_prompt_sha256": different["prompt_sha256"],
+    }).status_code == 409
+    assert calls == [preview["prompt_sha256"]]
+
+
+def test_duplicate_and_backup_preserve_ballots_and_dead_votes(client):
+    payload = voting_payload()
+    opened = timeline_event(payload, "open-ballot")
+    payload["nominations"][0]["status"] = "closed"
+    payload["seats"][-1]["dead_vote_available"] = False
+    record = client.post("/api/games", json={
+        **payload, "timeline": [opened, timeline_event(payload, "closed-ballot")],
+    }).json()
+    url = f"/api/games/{record['id']}"
+    duplicate = client.post(url + "/duplicate", json={"expected_version": 1})
+    archive = client.get(url + "/export").json()
+    imported = client.post("/api/games/import", json=archive)
+    for response in (duplicate, imported):
+        assert response.status_code == 201, response.text
+        restored = response.json()
+        assert restored["id"] != record["id"]
+        assert restored["draft"]["nominations"] == record["draft"]["nominations"]
+        assert restored["draft"]["seats"][-1]["dead_vote_available"] is False
+        assert restored["timeline"][:2] == record["timeline"]
+    assert client.get(url).json() == record

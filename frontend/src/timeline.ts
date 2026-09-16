@@ -4,7 +4,7 @@ import { executionStanding, playerLabel, voteTotal } from "./voting.ts";
 export const EVENT_LABELS = {
   initial: "起点", change: "局面变化", note: "说书人记录", branch: "分支",
   action: "行动", information: "信息", death: "死亡", revival: "复活", role_change: "角色变化",
-  phase: "阶段变化",
+  phase: "阶段变化", undo: "撤销", redo: "重做",
 };
 export type EventCategory = keyof typeof EVENT_LABELS;
 

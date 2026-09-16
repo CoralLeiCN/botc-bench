@@ -252,7 +252,9 @@ class EventDetails(StrictModel):
 class TimelineEntry(StrictModel):
     id: str = Field(min_length=1, max_length=80)
     recorded_at: datetime
-    kind: Literal["initial", "change", "note", "branch", "action", "information"] = "change"
+    kind: Literal[
+        "initial", "change", "note", "branch", "undo", "redo", "action", "information"
+    ] = "change"
     summary: str = Field(min_length=1, max_length=500)
     note: str = Field(default="", max_length=2000)
     snapshot: GameSnapshot
@@ -287,6 +289,10 @@ class BranchRequest(StrictModel):
     expected_version: int = Field(ge=1)
 
 
+class DuplicateRequest(StrictModel):
+    expected_version: int = Field(ge=1)
+
+
 class GameWrite(GameDraft):
     expected_version: Optional[int] = Field(default=None, ge=1)
     timeline: Optional[List[TimelineEntry]] = Field(default=None, max_length=20000)
@@ -307,6 +313,36 @@ class GameWrite(GameDraft):
         return self
 
 
+class SavedAnalysis(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    created_at: datetime
+    source_game_id: str
+    source_game_version: int = Field(ge=1)
+    event_id: str
+    snapshot: GameDraft
+    question: str = Field(min_length=1, max_length=4000)
+    selected_seat_id: Optional[str] = None
+    answer: str
+    duration_ms: int = Field(ge=0)
+    model: Optional[str] = None
+    perspective: Literal["storyteller", "player"] = "storyteller"
+    prompt_sha256: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
+class SavedReasonRequest(StrictModel):
+    event_id: str = Field(min_length=1, max_length=80)
+    question: str = Field(min_length=1, max_length=4000)
+    selected_seat_id: Optional[str] = Field(default=None, max_length=80)
+    perspective: Literal["storyteller", "player"] = "storyteller"
+    expected_prompt_sha256: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+    @model_validator(mode="after")
+    def validate_viewer(self) -> "SavedReasonRequest":
+        if self.perspective == "player" and not self.selected_seat_id:
+            raise ValueError("player perspective requires selected_seat_id")
+        return self
+
+
 class GameRecord(StrictModel):
     id: str
     version: int
@@ -315,6 +351,59 @@ class GameRecord(StrictModel):
     draft: GameDraft
     timeline: List[TimelineEntry]
     branch_origin: Optional[BranchOrigin] = None
+    analyses: List[SavedAnalysis] = Field(default_factory=list)
+
+
+class GameArchive(StrictModel):
+    format: Literal["botc-bench-game"] = "botc-bench-game"
+    schema_version: Literal[1] = 1
+    exported_at: datetime
+    game: GameRecord
+
+    @model_validator(mode="after")
+    def validate_archive(self) -> "GameArchive":
+        GameWrite(**self.game.draft.model_dump(), timeline=self.game.timeline)
+        events = {event.id: event for event in self.game.timeline}
+        ids = [analysis.id for analysis in self.game.analyses]
+        if len(ids) != len(set(ids)):
+            raise ValueError("analysis ids must be unique")
+        for analysis in self.game.analyses:
+            event = events.get(analysis.event_id)
+            if event is None or event.snapshot.model_dump() != analysis.snapshot.model_dump():
+                raise ValueError("analysis must match its original timeline snapshot")
+            if analysis.selected_seat_id is not None and not any(
+                seat.id == analysis.selected_seat_id for seat in analysis.snapshot.seats
+            ):
+                raise ValueError("analysis selected seat must exist in its snapshot")
+        return self
+
+
+class RecoveryRecord(StrictModel):
+    id: str
+    version: int = Field(ge=1)
+    updatedAt: datetime
+
+
+class UndoHistory(StrictModel):
+    past: List[GameSnapshot] = Field(default_factory=list, max_length=100)
+    future: List[GameSnapshot] = Field(default_factory=list, max_length=100)
+
+
+class DraftRecovery(StrictModel):
+    schema_version: Literal[1]
+    saved_at: datetime
+    record: Optional[RecoveryRecord] = None
+    timeline: List[TimelineEntry] = Field(min_length=1, max_length=20000)
+    history: UndoHistory
+    branch_origin: Optional[BranchOrigin] = None
+    dirty: bool
+
+    @model_validator(mode="after")
+    def validate_recovery(self) -> "DraftRecovery":
+        ids = [event.id for event in self.timeline]
+        if len(ids) != len(set(ids)):
+            raise ValueError("timeline event ids must be unique")
+        return self
 
 
 class GameSummary(StrictModel):

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import AsyncIterator, List, Optional
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +15,10 @@ from .config import Settings
 from .database import EventNotFound, GameNotFound, GameRepository, TimelineConflict, VersionConflict
 from .models import (
     BranchRequest,
+    DraftRecovery,
+    DuplicateRequest,
+    GameArchive,
+    GameDraft,
     GameRecord,
     GameSnapshot,
     GameSummary,
@@ -22,6 +28,8 @@ from .models import (
     ReasonPreviewRequest,
     ReasonRequest,
     ReasonResponse,
+    SavedAnalysis,
+    SavedReasonRequest,
     Script,
 )
 from .services.codex_harness import CodexHarness, HarnessFailed, HarnessUnavailable, PromptChanged
@@ -117,6 +125,22 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def list_games() -> List[GameSummary]:
         return repository.list()
 
+    @app.post("/api/drafts/validate", response_model=DraftRecovery)
+    def validate_recovery(payload: DraftRecovery) -> DraftRecovery:
+        for snapshot in [
+            *(event.snapshot for event in payload.timeline),
+            *payload.history.past,
+            *payload.history.future,
+        ]:
+            validate_script_roles(snapshot)
+        return payload
+
+    @app.post("/api/games/import", response_model=GameRecord, status_code=201)
+    def import_game(payload: GameArchive) -> GameRecord:
+        for event in payload.game.timeline:
+            validate_script_roles(event.snapshot)
+        return repository.import_game(payload.game)
+
     @app.post("/api/games", response_model=GameRecord, status_code=status.HTTP_201_CREATED)
     def create_game(payload: GameWrite) -> GameRecord:
         draft = payload.as_draft()
@@ -131,6 +155,73 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             return repository.get(game_id)
         except GameNotFound as exc:
             raise HTTPException(status_code=404, detail="game not found") from exc
+
+    @app.get("/api/games/{game_id}/export", response_model=GameArchive)
+    def export_game(game_id: str) -> GameArchive:
+        return GameArchive(exported_at=datetime.now(timezone.utc), game=get_game(game_id))
+
+    @app.post("/api/games/{game_id}/duplicate", response_model=GameRecord, status_code=201)
+    def duplicate_game(game_id: str, payload: DuplicateRequest) -> GameRecord:
+        try:
+            return repository.duplicate(game_id, payload.expected_version)
+        except GameNotFound as exc:
+            raise HTTPException(status_code=404, detail="game not found") from exc
+        except VersionConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @app.post("/api/games/{game_id}/analyses", response_model=SavedAnalysis, status_code=201)
+    async def analyse_game(game_id: str, payload: SavedReasonRequest) -> SavedAnalysis:
+        source = get_game(game_id)
+        event = next((item for item in source.timeline if item.id == payload.event_id), None)
+        if event is None:
+            raise HTTPException(status_code=404, detail="timeline event not found")
+        timeline = source.timeline[:source.timeline.index(event) + 1]
+        try:
+            snapshot = GameDraft.model_validate(event.snapshot.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="请先完成该时刻的局面配置") from exc
+        if payload.selected_seat_id is not None and not any(
+            seat.id == payload.selected_seat_id for seat in snapshot.seats
+        ):
+            raise HTTPException(status_code=422, detail="selected seat not found in snapshot")
+        validate_script_roles(snapshot)
+        try:
+            preview = harness.preview(
+                snapshot, payload.question, payload.selected_seat_id, payload.perspective,
+                timeline=timeline,
+            )
+            if (payload.expected_prompt_sha256 and
+                    payload.expected_prompt_sha256 != preview.prompt_sha256):
+                raise PromptChanged("输入已变化，请刷新预览后重试")
+            result = await harness.reason(
+                snapshot, payload.question, payload.selected_seat_id,
+                payload.perspective, preview.prompt_sha256,
+                timeline=timeline,
+            )
+            analysis = SavedAnalysis(
+                id=str(uuid4()),
+                created_at=datetime.now(timezone.utc),
+                source_game_id=source.id,
+                source_game_version=source.version,
+                event_id=event.id,
+                snapshot=snapshot,
+                question=payload.question,
+                selected_seat_id=payload.selected_seat_id,
+                answer=result.answer,
+                duration_ms=result.duration_ms,
+                model=resolved_settings.codex_model,
+                perspective=payload.perspective,
+                prompt_sha256=preview.prompt_sha256,
+            )
+            return repository.save_analysis(game_id, analysis)
+        except PromptChanged as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except GameNotFound as exc:
+            raise HTTPException(status_code=404, detail="game deleted during analysis") from exc
+        except HarnessUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except HarnessFailed as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @app.put("/api/games/{game_id}", response_model=GameRecord)
     def update_game(game_id: str, payload: GameWrite) -> GameRecord:

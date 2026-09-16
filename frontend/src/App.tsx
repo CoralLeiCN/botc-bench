@@ -1,5 +1,5 @@
 import { AlertTriangle, Eye, LoaderCircle, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, ApiFailure } from "./api";
 import { CodexPanel } from "./components/CodexPanel";
 import { GrimoireBoard } from "./components/GrimoireBoard";
@@ -22,6 +22,8 @@ import {
 } from "./game";
 import { nextNightStep, nightStepSeats } from "./night";
 import { createEntry, createManualEntry, recordChange } from "./timeline";
+import { emptyHistory, rememberChange, stepHistory } from "./history";
+import { recoverySlot, writeRecovery } from "./recovery";
 import type {
   BranchOrigin,
   Composition,
@@ -36,19 +38,23 @@ import type {
   Script,
   Seat,
   TimelineEntry,
+  RecordState,
+  SavedAnalysis,
 } from "./types";
-
-interface RecordState {
-  id: string;
-  version: number;
-  updatedAt: string;
-}
 
 export default function App() {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [savedGames, setSavedGames] = useState<GameSummary[]>([]);
   const [harnessStatus, setHarnessStatus] = useState<HarnessStatus | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [editor, setEditor] = useState({ timeline: [] as TimelineEntry[], history: emptyHistory() });
+  const { timeline, history } = editor;
+  const setTimeline = useCallback((next: TimelineEntry[] | ((current: TimelineEntry[]) => TimelineEntry[])) => {
+    setEditor((current) => ({ ...current, timeline: typeof next === "function" ? next(current.timeline) : next }));
+  }, []);
+  const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const recoveryKeyRef = useRef<string | null>(null);
+  const [recoveryReady, setRecoveryReady] = useState(false);
   const game = timeline[timeline.length - 1]?.snapshot ?? null;
   const [replayIndex, setReplayIndex] = useState<number | null>(null);
   const [branchOrigin, setBranchOrigin] = useState<BranchOrigin | null>(null);
@@ -88,15 +94,47 @@ export default function App() {
   useEffect(() => {
     let active = true;
     void Promise.all([api.scripts(), api.games(), api.harnessStatus()])
-      .then(([scriptData, gameData, status]) => {
+      .then(async ([scriptData, gameData, status]) => {
         if (!active) return;
         if (!scriptData.length) throw new Error("后端没有返回可用剧本");
         setScripts(scriptData);
         setSavedGames(gameData);
         setHarnessStatus(status);
+        try {
+          const slot = recoverySlot(window.localStorage, window.sessionStorage);
+          recoveryKeyRef.current = slot.key;
+          if (slot.raw) {
+            const recovered = await api.validateRecovery(JSON.parse(slot.raw));
+            const saved = recovered.record && gameData.some((item) => item.id === recovered.record?.id)
+              ? await api.game(recovered.record.id) : null;
+            if (!active) return;
+            const compatible = saved && saved.version === recovered.record?.version &&
+              JSON.stringify(saved.timeline) === JSON.stringify(recovered.timeline.slice(0, saved.timeline.length));
+            setEditor({ timeline: recovered.timeline, history: recovered.history });
+            setRecord(compatible ? { id: saved.id, version: saved.version, updatedAt: saved.updated_at } : null);
+            protectedTimelineLengthRef.current = compatible ? saved.timeline.length : 0;
+            setBranchOrigin(recovered.branch_origin);
+            setAnalyses(compatible ? saved.analyses : []);
+            setSelectedSeatId(recovered.timeline.at(-1)?.snapshot.seats[0]?.id ?? null);
+            setDirty(recovered.dirty || !compatible);
+            setAutoSaveFailed(false);
+            setNotice(compatible || !recovered.record
+              ? "已恢复本机草稿及撤销记录，自动保存将继续"
+              : "原存档已有变化或已删除，草稿已作为独立副本恢复");
+            setRecoveryReady(true);
+            return;
+          }
+        } catch (error) {
+          if (!active) return;
+          // Preserve a damaged checkpoint instead of replacing it with an empty game.
+          recoveryKeyRef.current = null;
+          setRecoveryError(`草稿恢复不可用：${readError(error)}。原草稿缓存已保留，请先保存到本地存档。`);
+        }
+        if (!active) return;
         const initial = createDraft(scriptData[0]);
         setTimeline([createEntry(initial, "开始记录", "initial")]);
         setSelectedSeatId(initial.seats[0].id);
+        setRecoveryReady(true);
       })
       .catch((error: unknown) => {
         if (active) setFatalError(readError(error));
@@ -104,7 +142,20 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [setTimeline]);
+
+  useLayoutEffect(() => {
+    if (!recoveryReady || !timeline.length || !recoveryKeyRef.current) return;
+    try {
+      writeRecovery(window.localStorage, recoveryKeyRef.current, {
+        schema_version: 1, saved_at: new Date().toISOString(), record, timeline, history,
+        branch_origin: branchOrigin, dirty,
+      });
+      setRecoveryError(null);
+    } catch (error) {
+      setRecoveryError(`草稿缓存失败：${readError(error)}。请保存局面或导出 JSON 备份。`);
+    }
+  }, [recoveryReady, timeline, history, record, branchOrigin, dirty]);
 
   const script = useMemo(
     () => scripts.find((item) => item.id === displayedGame?.script_id) ?? null,
@@ -182,11 +233,11 @@ export default function App() {
       invalidateCodexContext();
       const metadata = { id: crypto.randomUUID(), recorded_at: new Date().toISOString() };
       const protectedLength = protectedTimelineLengthRef.current;
-      setTimeline((current) => {
-        const last = current[current.length - 1];
-        return last
-          ? recordChange(current, updater(last.snapshot), scripts, metadata, protectedLength)
-          : current;
+      setEditor((current) => {
+        const last = current.timeline.at(-1);
+        if (!last) return current;
+        const next = recordChange(current.timeline, updater(last.snapshot), scripts, metadata, protectedLength);
+        return { timeline: next, history: rememberChange(current.history, current.timeline, next) };
       });
       setDirty(true);
       setNotice(null);
@@ -219,6 +270,7 @@ export default function App() {
         return null;
       }
       setRecord({ id: saved.id, version: saved.version, updatedAt: saved.updated_at });
+      setAnalyses((current) => [...saved.analyses, ...current.filter((item) => !saved.analyses.some((savedItem) => savedItem.id === item.id))]);
       if (gameRevisionRef.current === savedRevision) {
         setTimeline(saved.timeline);
         setDirty(false);
@@ -242,7 +294,44 @@ export default function App() {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [game, timeline, record, refreshSavedGames]);
+  }, [game, timeline, record, refreshSavedGames, setTimeline]);
+
+  const undoRedo = useCallback((direction: "undo" | "redo") => {
+    if (replaying || viewAsSeatId || branchingRef.current || loadingGameRef.current) return;
+    const metadata = { id: crypto.randomUUID(), recorded_at: new Date().toISOString() };
+    // Prevent the next typed change from merging into an undo/redo event.
+    protectedTimelineLengthRef.current = timeline.length + 1;
+    setEditor((current) => {
+      const snapshot = current.timeline.at(-1)?.snapshot;
+      const step = snapshot && stepHistory(current.history, snapshot, direction);
+      if (!step) return current;
+      return {
+        timeline: [...current.timeline, createEntry(step.snapshot, direction === "undo" ? "撤销局面修改" : "重做局面修改", direction, "", metadata)],
+        history: step.history,
+      };
+    });
+    gameRevisionRef.current += 1;
+    invalidateCodexContext();
+    setSelectedRoleId(null);
+    setDirty(true);
+    setNotice(null);
+  }, [invalidateCodexContext, replaying, viewAsSeatId, timeline.length]);
+
+  const adoptRecord = (loaded: GameRecord) => {
+    documentEpochRef.current += 1;
+    gameRevisionRef.current += 1;
+    invalidateCodexContext();
+    setEditor({ timeline: loaded.timeline, history: emptyHistory() });
+    protectedTimelineLengthRef.current = loaded.timeline.length;
+    setAnalyses(loaded.analyses);
+    setReplayIndex(null);
+    setBranchOrigin(loaded.branch_origin);
+    setAutoSaveFailed(false);
+    setRecord({ id: loaded.id, version: loaded.version, updatedAt: loaded.updated_at });
+    setSelectedSeatId(loaded.draft.seats[0]?.id ?? null);
+    setSelectedRoleId(null);
+    setDirty(false);
+  };
 
   useEffect(() => {
     if (
@@ -265,12 +354,22 @@ export default function App() {
     const listener = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        void saveGame();
+        if (!branchingRef.current && !loadingGameRef.current) void saveGame();
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const typing = target?.closest("input, textarea, select, [contenteditable=true]");
+      if (typing || event.isComposing || !(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const direction = key === "z" ? (event.shiftKey ? "redo" : "undo") : key === "y" ? "redo" : null;
+      if (direction) {
+        event.preventDefault();
+        if (history[direction === "undo" ? "past" : "future"].length) undoRedo(direction);
       }
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [saveGame]);
+  }, [saveGame, undoRedo, history]);
 
   const changeScript = (scriptId: string) => {
     if (!game || scriptId === game.script_id) return;
@@ -431,7 +530,8 @@ export default function App() {
     documentEpochRef.current += 1;
     gameRevisionRef.current += 1;
     invalidateCodexContext();
-    setTimeline([createEntry(draft, "开始记录", "initial")]);
+    setEditor({ timeline: [createEntry(draft, "开始记录", "initial")], history: emptyHistory() });
+    setAnalyses([]);
     protectedTimelineLengthRef.current = 0;
     setReplayIndex(null);
     setBranchOrigin(null);
@@ -468,18 +568,7 @@ export default function App() {
         setNotice("载入期间当前局面已变化，迟到的存档响应未覆盖这些修改");
         return;
       }
-      documentEpochRef.current += 1;
-      gameRevisionRef.current += 1;
-      invalidateCodexContext();
-      setTimeline(loaded.timeline);
-      protectedTimelineLengthRef.current = loaded.timeline.length;
-      setReplayIndex(null);
-      setBranchOrigin(loaded.branch_origin);
-      setAutoSaveFailed(false);
-      setRecord({ id: loaded.id, version: loaded.version, updatedAt: loaded.updated_at });
-      setSelectedSeatId(loaded.draft.seats[0]?.id ?? null);
-      setSelectedRoleId(null);
-      setDirty(false);
+      adoptRecord(loaded);
       setNotice(`已载入「${loaded.draft.name}」`);
       setCodexAnswer("");
     } catch (error) {
@@ -491,14 +580,25 @@ export default function App() {
   };
 
   const askCodex = async () => {
-    if (!reasonRequest || !question.trim() || !preview || codexBusy) return;
+    if (!reasonRequest || !question.trim() || !preview || codexBusy || savingRef.current || loadingGameRef.current || branchingRef.current) return;
+    const requestDocument = documentEpochRef.current;
     const requestContext = codexContextEpochRef.current;
+    const eventId = timeline[replayIndex ?? timeline.length - 1].id;
     setCodexBusy(true);
     setCodexError(null);
+    setCodexAnswer("");
     try {
-      const result = await api.reason(reasonRequest, preview.prompt_sha256);
-      if (codexContextEpochRef.current === requestContext) {
-        setCodexAnswer(result.answer);
+      const source = dirty || !record ? await saveGame() : record;
+      if (!source) {
+        setCodexError("请先完成配置并保存局面，再运行分析。");
+        return;
+      }
+      const result = await api.analyseGame(source.id, eventId, reasonRequest, preview.prompt_sha256);
+      if (documentEpochRef.current === requestDocument) {
+        setAnalyses((current) => current.some((item) => item.id === result.id) ? current : [...current, result]);
+        if (codexContextEpochRef.current === requestContext) setCodexAnswer(result.answer);
+      } else {
+        setNotice("分析已保存到原存档；载入原存档即可查看。");
       }
     } catch (error) {
       if (codexContextEpochRef.current === requestContext) setCodexError(readError(error));
@@ -534,17 +634,7 @@ export default function App() {
       const source = dirty || !record ? await saveGame() : record;
       if (!source) return;
       const branched = await api.branchGame(source.id, eventId, source.version);
-      documentEpochRef.current += 1;
-      gameRevisionRef.current += 1;
-      invalidateCodexContext();
-      setTimeline(branched.timeline);
-      protectedTimelineLengthRef.current = branched.timeline.length;
-      setRecord({ id: branched.id, version: branched.version, updatedAt: branched.updated_at });
-      setBranchOrigin(branched.branch_origin);
-      setAutoSaveFailed(false);
-      setReplayIndex(null);
-      setSelectedSeatId(branched.draft.seats[0]?.id ?? null);
-      setDirty(false);
+      adoptRecord(branched);
       setNotice("已创建并保存分支，可以从这个时刻继续编辑");
       await refreshSavedGames();
     } catch (error) {
@@ -553,6 +643,53 @@ export default function App() {
       branchingRef.current = false;
       setBranching(false);
     }
+  };
+
+  const duplicateGame = async () => {
+    if (!record || branchingRef.current || savingRef.current || loadingGameRef.current) return;
+    branchingRef.current = true;
+    setBranching(true);
+    try {
+      const source = dirty ? await saveGame() : record;
+      if (!source) return;
+      adoptRecord(await api.duplicateGame(source.id, source.version));
+      setNotice("已创建独立副本，原局面与分析仍保留");
+      await refreshSavedGames();
+    } catch (error) {
+      setNotice(`复制失败：${readError(error)}`);
+    } finally { branchingRef.current = false; setBranching(false); }
+  };
+
+  const exportGame = async () => {
+    if (branchingRef.current || savingRef.current || loadingGameRef.current) return;
+    branchingRef.current = true;
+    setBranching(true);
+    try {
+      const source = dirty || !record ? await saveGame() : record;
+      if (!source) return;
+      const archive = await api.exportGame(source.id);
+      downloadJson(archive, `${archive.game.draft.name.replace(/[\\/:*?"<>|]/g, "_") || "game"}.json`);
+      setNotice("已导出完整存档：当前局面、时间线和已保存分析");
+    } catch (error) {
+      setNotice(`导出失败：${readError(error)}`);
+    } finally { branchingRef.current = false; setBranching(false); }
+  };
+
+  const importGame = async (file: File) => {
+    if (branchingRef.current || savingRef.current || loadingGameRef.current) return;
+    if (dirty && !window.confirm("当前局面还有未保存修改。仍要导入并载入新存档吗？")) return;
+    branchingRef.current = true;
+    setBranching(true);
+    try {
+      if (file.size > 50 * 1024 * 1024) throw new Error("文件超过 50 MB，请使用较小的单局备份");
+      const archive: unknown = JSON.parse(await file.text());
+      const imported = await api.importGame(archive);
+      adoptRecord(imported);
+      setNotice(`已导入「${imported.draft.name}」为独立存档`);
+      await refreshSavedGames();
+    } catch (error) {
+      setNotice(`导入失败：${readError(error)}`);
+    } finally { branchingRef.current = false; setBranching(false); }
   };
 
   if (fatalError) {
@@ -588,6 +725,13 @@ export default function App() {
       status={harnessStatus}
       answer={codexAnswer}
       busy={codexBusy}
+      disabled={saving || loadingGame || branching}
+      analyses={viewAsSeatId ? [] : analyses}
+      currentEventId={timeline[replayIndex ?? timeline.length - 1]?.id ?? null}
+      onViewSnapshot={(analysis) => {
+        const index = timeline.findIndex((entry) => entry.id === analysis.event_id);
+        if (index >= 0) { seek(index); setSelectedSeatId(analysis.selected_seat_id); }
+      }}
       error={codexError}
       onAsk={askCodex}
       onOpenNight={viewAsSeatId ? undefined : () => setPanelTab("night")}
@@ -637,8 +781,16 @@ export default function App() {
         onLoadGame={(id) => void loadGame(id)}
         onNewGame={newGame}
         onSave={() => void saveGame()}
+        canUndo={history.past.length > 0}
+        canRedo={history.future.length > 0}
+        onUndo={() => undoRedo("undo")}
+        onRedo={() => undoRedo("redo")}
+        onDuplicate={() => void duplicateGame()}
+        onExport={() => void exportGame()}
+        onImport={(file) => void importGame(file)}
       />
 
+      {recoveryError && <div className="recovery-warning" role="alert">{recoveryError}</div>}
       {notice && (
         <div className={`notice-bar ${notice.includes("失败") || notice.includes("冲突") ? "error" : ""}`}>
           {notice}
@@ -754,4 +906,15 @@ export default function App() {
 function readError(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "未知错误";
+}
+
+function downloadJson(value: unknown, filename: string) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

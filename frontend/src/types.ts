@@ -194,7 +194,7 @@ export type ManualEventKind = "note" | "action" | "information";
 export interface TimelineEntry {
   id: string;
   recorded_at: string;
-  kind: "initial" | "change" | "branch" | ManualEventKind;
+  kind: "initial" | "change" | "branch" | "undo" | "redo" | ManualEventKind;
   summary: string;
   note: string;
   snapshot: GameDraft;
@@ -215,6 +215,51 @@ export interface GameRecord {
   draft: GameDraft;
   timeline: TimelineEntry[];
   branch_origin: BranchOrigin | null;
+  analyses: SavedAnalysis[];
+}
+
+export interface SavedAnalysis {
+  perspective: "storyteller" | "player";
+  prompt_sha256: string | null;
+  id: string;
+  created_at: string;
+  source_game_id: string;
+  source_game_version: number;
+  event_id: string;
+  snapshot: GameDraft;
+  question: string;
+  selected_seat_id: string | null;
+  answer: string;
+  duration_ms: number;
+  model: string | null;
+}
+
+export interface GameArchive {
+  format: "botc-bench-game";
+  schema_version: 1;
+  exported_at: string;
+  game: GameRecord;
+}
+
+export interface RecordState {
+  id: string;
+  version: number;
+  updatedAt: string;
+}
+
+export interface UndoHistory {
+  past: GameDraft[];
+  future: GameDraft[];
+}
+
+export interface DraftRecovery {
+  schema_version: 1;
+  saved_at: string;
+  record: RecordState | null;
+  timeline: TimelineEntry[];
+  history: UndoHistory;
+  branch_origin: BranchOrigin | null;
+  dirty: boolean;
 }
 
 export interface GameSummary {

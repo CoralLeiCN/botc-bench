@@ -6,7 +6,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import type { HarnessStatus, ReasonPreview, Script, Seat } from "../types";
+import { phaseLabel } from "../timeline";
+import type { HarnessStatus, ReasonPreview, SavedAnalysis, Script, Seat } from "../types";
 
 interface CodexPanelProps {
   script: Script;
@@ -20,6 +21,10 @@ interface CodexPanelProps {
   status: HarnessStatus | null;
   answer: string;
   busy: boolean;
+  disabled: boolean;
+  analyses: SavedAnalysis[];
+  currentEventId: string | null;
+  onViewSnapshot: (analysis: SavedAnalysis) => void;
   error: string | null;
   onAsk: () => Promise<void>;
   onOpenNight?: () => void;
@@ -46,13 +51,17 @@ export function CodexPanel({
   status,
   answer,
   busy,
+  disabled,
+  analyses,
+  currentEventId,
+  onViewSnapshot,
   error,
   onAsk,
   onOpenNight,
 }: CodexPanelProps) {
   const submit = async () => {
     const value = question.trim();
-    if (!value || !preview || busy || !status?.available) return;
+    if (!value || !preview || busy || disabled || !status?.available) return;
     await onAsk();
   };
 
@@ -84,7 +93,7 @@ export function CodexPanel({
           <button
             type="button"
             key={label}
-            disabled={busy}
+            disabled={busy || disabled}
             onClick={() => onQuestionChange(prompt)}
           >
             {label}
@@ -107,7 +116,7 @@ export function CodexPanel({
         <button
           type="button"
           onClick={() => void submit()}
-          disabled={!question.trim() || !preview || busy || !status?.available}
+          disabled={!question.trim() || !preview || busy || disabled || !status?.available}
         >
           {busy ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
           {busy ? "推理中" : "触发本地 Codex"}
@@ -120,7 +129,7 @@ export function CodexPanel({
         {preview ? <pre aria-label="完整代理输入">{preview.prompt}</pre> : (
           <p role="status">{previewError ?? "正在生成输入预览…"}</p>
         )}
-        <button type="button" onClick={onRefreshPreview} disabled={busy}>刷新预览</button>
+        <button type="button" onClick={onRefreshPreview} disabled={busy || disabled}>刷新预览</button>
       </details>
 
       {!status?.available && (
@@ -149,6 +158,26 @@ export function CodexPanel({
           )}
         </article>
       )}
+
+      {!playerMode && <div className="saved-analyses">
+        <h3>已保存分析 <span>{analyses.length}</span></h3>
+        {!analyses.length && <p>分析完成后自动附在原始局面快照上。</p>}
+        {[...analyses].reverse().map((analysis) => {
+          const seat = analysis.snapshot.seats.find((item) => item.id === analysis.selected_seat_id);
+          return <details key={analysis.id} className="saved-analysis">
+            <summary>{analysis.question}</summary>
+            <div className="analysis-meta">
+              <time dateTime={analysis.created_at}>{new Date(analysis.created_at).toLocaleString("zh-CN")}</time>
+              <span>{analysis.snapshot.name} · {phaseLabel(analysis.snapshot)} · {analysis.perspective === "player" ? "玩家分析" : "说书人分析"}</span>
+              <span>{seat ? `${seat.position} 号 ${seat.player_name}` : "未选玩家"} · {(analysis.duration_ms / 1000).toFixed(1)} 秒</span>
+              {analysis.model && <span>{analysis.model}</span>}
+              <span>{currentEventId === analysis.event_id ? "当前显示的快照" : "来自历史快照"} · AI 分析，非官方裁定</span>
+            </div>
+            <button type="button" disabled={disabled} onClick={() => onViewSnapshot(analysis)}>查看原始局面</button>
+            <pre>{analysis.answer}</pre>
+          </details>;
+        })}
+      </div>}
 
       <div className="source-links">
         <a href={`/api/scripts/${script.id}/qa`} target="_blank" rel="noreferrer">

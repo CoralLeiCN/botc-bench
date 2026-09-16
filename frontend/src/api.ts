@@ -1,4 +1,6 @@
 import type {
+  DraftRecovery,
+  GameArchive,
   GameRecord,
   GameSummary,
   GameWrite,
@@ -7,6 +9,7 @@ import type {
   ReasonRequest,
   ReasonPreview,
   Script,
+  SavedAnalysis,
 } from "./types";
 
 export class ApiFailure extends Error {
@@ -45,6 +48,23 @@ export const api = {
   scripts: () => request<Script[]>("/api/scripts"),
   games: () => request<GameSummary[]>("/api/games"),
   game: (id: string) => request<GameRecord>(`/api/games/${encodeURIComponent(id)}`),
+  validateRecovery: (recovery: unknown) => request<DraftRecovery>("/api/drafts/validate", {
+    method: "POST", body: JSON.stringify(recovery),
+  }),
+  importGame: (archive: unknown) => request<GameRecord>("/api/games/import", {
+    method: "POST", body: JSON.stringify(archive),
+  }),
+  exportGame: (id: string) => request<GameArchive>(`/api/games/${encodeURIComponent(id)}/export`),
+  duplicateGame: (id: string, version: number) => request<GameRecord>(`/api/games/${encodeURIComponent(id)}/duplicate`, {
+    method: "POST", body: JSON.stringify({ expected_version: version }),
+  }),
+  analyseGame: (id: string, eventId: string, payload: ReasonRequest, promptSha256: string) =>
+    request<SavedAnalysis>(`/api/games/${encodeURIComponent(id)}/analyses`, {
+      method: "POST", body: JSON.stringify({
+        event_id: eventId, question: payload.question, selected_seat_id: payload.selected_seat_id,
+        perspective: payload.perspective, expected_prompt_sha256: promptSha256,
+      }),
+    }),
   createGame: (game: GameWrite) =>
     request<GameRecord>("/api/games", { method: "POST", body: JSON.stringify(game) }),
   updateGame: (id: string, game: GameWrite) =>

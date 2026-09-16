@@ -8,8 +8,10 @@ import type { DraftRecovery, GameDraft } from "../src/types.ts";
 const game: GameDraft = {
   schema_version: 1, name: "Test", script_id: "script-002", player_count: 5,
   composition: { townsfolk: 3, outsider: 0, minion: 1, demon: 1, traveller: 0, manual: false },
+  public_information: "",
   seats: Array.from({ length: 5 }, (_, i) => ({
     id: `seat-${i}`, position: i + 1, player_name: `Player ${i}`, role_id: null,
+    shown_role_id: null, shown_alignment: "unknown", public_claim: "", private_information: "",
     alive: true, alignment: "unknown", markers: [], notes: "",
   })), phase: "setup", day_number: 0, notes: "",
 };

@@ -98,6 +98,8 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
   }
   if (!same(before.composition, after.composition)) changes.push("调整角色配比");
   if (before.notes !== after.notes) addText("notes", "更新全局备注");
+  if (before.public_information !== after.public_information) addText("public_information", "更新公开信息");
+
   if (!same(before.night_checklist ?? null, after.night_checklist ?? null)) {
     const old = before.night_checklist;
     const next = after.night_checklist;
@@ -130,6 +132,10 @@ function describeChange(before: GameDraft, after: GameDraft, scripts: Script[]) 
     }
     if (previous.position !== seat.position) changes.push(`${seat.player_name}：${previous.position} → ${seat.position} 号座位`);
     if (previous.role_id !== seat.role_id) changes.push(`${name}：${roleName(previous.role_id)} → ${roleName(seat.role_id)}`);
+    if (previous.shown_role_id !== seat.shown_role_id) changes.push(`${name} 展示角色：${roleName(previous.shown_role_id)} → ${roleName(seat.shown_role_id)}`);
+    if (previous.shown_alignment !== seat.shown_alignment) changes.push(`${name}：更新告知阵营`);
+    if (previous.public_claim !== seat.public_claim) addText(`${seat.id}.public_claim`, `${name}：更新公开声明`);
+    if (previous.private_information !== seat.private_information) addText(`${seat.id}.private_information`, `${name}：更新私人信息`);
     if (previous.alive !== seat.alive) changes.push(`${name} ${seat.alive ? "复活" : "死亡"}`);
     if (previous.alignment !== seat.alignment) changes.push(`${name} 阵营：${alignments[previous.alignment]} → ${alignments[seat.alignment]}`);
     if (previous.notes !== seat.notes) addText(`${seat.id}.notes`, `${name}：更新玩家备注`);

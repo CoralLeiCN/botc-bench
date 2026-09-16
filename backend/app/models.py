@@ -84,6 +84,11 @@ class Seat(StrictModel):
     position: int = Field(ge=1, le=20)
     player_name: str = Field(default="", max_length=80)
     role_id: Optional[str] = Field(default=None, max_length=80)
+    # Storyteller truth stays in role_id/alignment; knowledge is explicitly recorded.
+    shown_role_id: Optional[str] = Field(default=None, max_length=80)
+    shown_alignment: Literal["good", "evil", "unknown"] = "unknown"
+    public_claim: str = Field(default="", max_length=2000)
+    private_information: str = Field(default="", max_length=5000)
     alive: bool = True
     alignment: Literal["good", "evil", "unknown"] = "unknown"
     markers: List[Marker] = Field(default_factory=list, max_length=32)
@@ -146,6 +151,8 @@ class GameSnapshot(StrictModel):
     phase: Literal["setup", "first_night", "day", "night", "finished"] = "setup"
     day_number: int = Field(default=0, ge=0, le=99)
     notes: str = Field(default="", max_length=5000)
+    public_information: str = Field(default="", max_length=5000)
+
     night_checklist: Optional[NightChecklist] = None
 
     @model_validator(mode="after")
@@ -254,12 +261,22 @@ class SavedAnalysis(StrictModel):
     answer: str
     duration_ms: int = Field(ge=0)
     model: Optional[str] = None
+    perspective: Literal["storyteller", "player"] = "storyteller"
+    prompt_sha256: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class SavedReasonRequest(StrictModel):
     event_id: str = Field(min_length=1, max_length=80)
     question: str = Field(min_length=1, max_length=4000)
     selected_seat_id: Optional[str] = Field(default=None, max_length=80)
+    perspective: Literal["storyteller", "player"] = "storyteller"
+    expected_prompt_sha256: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+    @model_validator(mode="after")
+    def validate_viewer(self) -> "SavedReasonRequest":
+        if self.perspective == "player" and not self.selected_seat_id:
+            raise ValueError("player perspective requires selected_seat_id")
+        return self
 
 
 class GameRecord(StrictModel):
@@ -334,10 +351,57 @@ class GameSummary(StrictModel):
     updated_at: datetime
 
 
-class ReasonRequest(StrictModel):
-    game: GameDraft
-    question: str = Field(min_length=1, max_length=4000)
+class PublicSeat(StrictModel):
+    id: str
+    position: int
+    player_name: str
+    alive: bool
+    public_claim: str
+
+
+class PlayerKnowledge(StrictModel):
+    seat_id: str
+    shown_role_id: Optional[str]
+    shown_alignment: Literal["good", "evil", "unknown"]
+    private_information: str
+
+
+class PlayerView(StrictModel):
+    script_id: str
+    player_count: int
+    phase: Literal["setup", "first_night", "day", "night", "finished"]
+    day_number: int
+    seats: List[PublicSeat]
+    public_information: str
+    you: PlayerKnowledge
+
+
+class ReasonPreviewRequest(StrictModel):
+    game: GameSnapshot
+    question: str = Field(default="", max_length=4000)
     selected_seat_id: Optional[str] = Field(default=None, max_length=80)
+    perspective: Literal["storyteller", "player"] = "storyteller"
+
+    @model_validator(mode="after")
+    def validate_viewer(self) -> "ReasonPreviewRequest":
+        if self.perspective == "player" and not self.selected_seat_id:
+            raise ValueError("player perspective requires selected_seat_id")
+        if self.selected_seat_id is not None and not any(
+            seat.id == self.selected_seat_id for seat in self.game.seats
+        ):
+            raise ValueError("selected_seat_id is not present in game")
+        return self
+
+
+class ReasonRequest(ReasonPreviewRequest):
+    question: str = Field(min_length=1, max_length=4000)
+    expected_prompt_sha256: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
+class ReasonPreview(StrictModel):
+    prompt: str
+    prompt_sha256: str
+    player_view: Optional[PlayerView] = None
 
 
 class ReasonResponse(StrictModel):

@@ -24,13 +24,15 @@ from .models import (
     GameSummary,
     GameWrite,
     HarnessStatus,
+    ReasonPreview,
+    ReasonPreviewRequest,
     ReasonRequest,
     ReasonResponse,
     SavedAnalysis,
     SavedReasonRequest,
     Script,
 )
-from .services.codex_harness import CodexHarness, HarnessFailed, HarnessUnavailable
+from .services.codex_harness import CodexHarness, HarnessFailed, HarnessUnavailable, PromptChanged
 
 
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
@@ -72,7 +74,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             raise HTTPException(status_code=422, detail="unknown script_id") from exc
         allowed = {role.id for role in [*script.roles, *script.travellers]}
         invalid_roles = sorted(
-            {seat.role_id for seat in draft.seats if seat.role_id and seat.role_id not in allowed}
+            {
+                role_id for seat in draft.seats
+                for role_id in (seat.role_id, seat.shown_role_id)
+                if role_id and role_id not in allowed
+            }
         )
         invalid_sources = sorted(
             {
@@ -179,7 +185,16 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             raise HTTPException(status_code=422, detail="selected seat not found in snapshot")
         validate_script_roles(snapshot)
         try:
-            result = await harness.reason(snapshot, payload.question, payload.selected_seat_id)
+            preview = harness.preview(
+                snapshot, payload.question, payload.selected_seat_id, payload.perspective
+            )
+            if (payload.expected_prompt_sha256 and
+                    payload.expected_prompt_sha256 != preview.prompt_sha256):
+                raise PromptChanged("输入已变化，请刷新预览后重试")
+            result = await harness.reason(
+                snapshot, payload.question, payload.selected_seat_id,
+                payload.perspective, preview.prompt_sha256,
+            )
             analysis = SavedAnalysis(
                 id=str(uuid4()),
                 created_at=datetime.now(timezone.utc),
@@ -192,8 +207,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                 answer=result.answer,
                 duration_ms=result.duration_ms,
                 model=resolved_settings.codex_model,
+                perspective=payload.perspective,
+                prompt_sha256=preview.prompt_sha256,
             )
             return repository.save_analysis(game_id, analysis)
+        except PromptChanged as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except GameNotFound as exc:
             raise HTTPException(status_code=404, detail="game deleted during analysis") from exc
         except HarnessUnavailable as exc:
@@ -244,11 +263,26 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def harness_status() -> HarnessStatus:
         return harness.status()
 
+    @app.post("/api/reason/preview", response_model=ReasonPreview)
+    def preview_reason(payload: ReasonPreviewRequest) -> ReasonPreview:
+        validate_script_roles(payload.game)
+        try:
+            return harness.preview(
+                payload.game, payload.question, payload.selected_seat_id, payload.perspective
+            )
+        except HarnessFailed as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
     @app.post("/api/reason", response_model=ReasonResponse)
     async def reason(payload: ReasonRequest) -> ReasonResponse:
         validate_script_roles(payload.game)
         try:
-            return await harness.reason(payload.game, payload.question, payload.selected_seat_id)
+            return await harness.reason(
+                payload.game, payload.question, payload.selected_seat_id,
+                payload.perspective, payload.expected_prompt_sha256,
+            )
+        except PromptChanged as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except HarnessUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except HarnessFailed as exc:

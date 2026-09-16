@@ -323,7 +323,7 @@ def test_temporary_empty_marker_label_does_not_block_later_history_saves(
 def save_test_analysis(client: TestClient, record: dict, monkeypatch):
     from backend.app.models import GameDraft, ReasonResponse
 
-    async def reason(game, question, selected_seat_id):
+    async def reason(game, question, selected_seat_id, *args):
         # Editing while reasoning must not change the captured context or lose the result.
         assert game.model_dump(mode="json") == record["draft"]
         client.app.state.repository.update(
@@ -466,6 +466,97 @@ def test_branch_carries_only_analyses_from_retained_events(client: TestClient, m
     assert len(client.get(url).json()["analyses"]) == 2
 
 
+
+
+def test_player_knowledge_round_trip_replay_and_branch(client: TestClient) -> None:
+    payload = draft_payload()
+    payload["seats"][0].update(
+        role_id="drunk", shown_role_id="empath", shown_alignment="good",
+        public_claim="I claim Chef", private_information="First night: 0",
+    )
+    payload["public_information"] = "The game begins"
+    initial = timeline_event(payload)
+    payload["seats"][0]["private_information"] += "\nSecond night: 1"
+    payload["seats"][0]["public_claim"] = "I now claim Empath"
+    later = timeline_event(payload, "event-2")
+    created = client.post("/api/games", json={**payload, "timeline": [initial, later]})
+    assert created.status_code == 201
+    record = client.get(f"/api/games/{created.json()['id']}").json()
+    assert record["draft"]["seats"][0]["shown_role_id"] == "empath"
+    assert record["draft"]["seats"][0]["role_id"] == "drunk"
+    historical = client.post("/api/reason/preview", json={
+        "game": record["timeline"][0]["snapshot"],
+        "selected_seat_id": "seat-1", "perspective": "player",
+    })
+    assert historical.status_code == 200
+    assert historical.json()["player_view"]["you"]["private_information"] == "First night: 0"
+    assert "Second night: 1" not in historical.json()["prompt"]
+    branch = client.post(f"/api/games/{record['id']}/branch", json={
+        "event_id": "event-1", "expected_version": 1,
+    }).json()
+    assert branch["draft"]["seats"][0]["private_information"] == "First night: 0"
+    assert branch["draft"]["seats"][0]["public_claim"] == "I claim Chef"
+    assert branch["draft"]["public_information"] == "The game begins"
+
+
+def test_legacy_saves_do_not_infer_shown_identity_from_secret_identity(client: TestClient) -> None:
+    payload = draft_payload()
+    payload["seats"][0].update(role_id="drunk", alignment="good", notes="hidden information")
+    record = client.post("/api/games", json=payload).json()
+    seat = record["draft"]["seats"][0]
+    assert seat["shown_role_id"] is None
+    assert seat["shown_alignment"] == "unknown"
+    assert seat["private_information"] == ""
+    assert seat["public_claim"] == ""
+    assert record["timeline"][0]["snapshot"]["seats"][0] == seat
+
+
+@pytest.mark.parametrize("perspective,seat_id", [
+    ("player", None), ("player", "missing"), ("storyteller", "missing"), ("invalid", "seat-1"),
+])
+@pytest.mark.parametrize("endpoint", ["/api/reason/preview", "/api/reason"])
+def test_invalid_viewers_fail_closed(client, perspective, seat_id, endpoint) -> None:
+    response = client.post(endpoint, json={
+        "game": draft_payload(), "question": "Question",
+        "perspective": perspective, "selected_seat_id": seat_id,
+    })
+    assert response.status_code == 422
+
+
+def test_shown_roles_are_validated_in_current_and_historical_snapshots(client: TestClient) -> None:
+    payload = draft_payload()
+    payload["seats"][0]["shown_role_id"] = "fanggu"
+    assert client.post("/api/games", json=payload).status_code == 422
+    event = timeline_event(payload)
+    payload["seats"][0]["shown_role_id"] = "empath"
+    assert client.post("/api/games", json={
+        **payload, "timeline": [event, timeline_event(payload, "event-2")],
+    }).status_code == 422
+
+
+def test_preview_available_with_disabled_harness_and_incomplete_setup(client: TestClient) -> None:
+    payload = draft_payload()
+    payload["composition"]["townsfolk"] = 0
+    payload["seats"][0]["markers"] = [{"id": "draft", "type": "custom", "label": ""}]
+    response = client.post("/api/reason/preview", json={
+        "game": payload, "perspective": "player", "selected_seat_id": "seat-1",
+    })
+    assert response.status_code == 200
+    assert response.json()["player_view"] is not None
+    assert len(response.json()["prompt_sha256"]) == 64
+    assert "<player-view-json>" in response.json()["prompt"]
+
+
+def test_reason_rejects_stale_preview_before_harness_launch(client: TestClient) -> None:
+    payload = {"game": draft_payload(), "question": "Question", "perspective": "player",
+               "selected_seat_id": "seat-1"}
+    preview = client.post("/api/reason/preview", json=payload).json()
+    payload["game"]["public_information"] = "New public information"
+    response = client.post("/api/reason", json={
+        **payload, "expected_prompt_sha256": preview["prompt_sha256"],
+    })
+    assert response.status_code == 409
+
 def night_checklist_payload():
     return {
         "id": "night-1",
@@ -601,3 +692,50 @@ def test_typed_events_validate_participants_against_their_own_snapshot(
     event["details"]["actor_seat_id"] = None
     event["note"] = "   "
     assert client.post("/api/games", json={**payload, "timeline": [event]}).status_code == 422
+
+
+def test_saved_player_analysis_preserves_preview_and_perspective(client, monkeypatch):
+    from backend.app.models import ReasonResponse
+
+    payload = draft_payload()
+    payload["seats"][0].update(
+        role_id="drunk", shown_role_id="empath", shown_alignment="good",
+        private_information="I learned 1", notes="STORYTELLER_ONLY_SECRET",
+    )
+    record = client.post("/api/games", json=payload).json()
+    request = {
+        "game": record["draft"], "question": "What do I know?",
+        "selected_seat_id": "seat-1", "perspective": "player",
+    }
+    preview = client.post("/api/reason/preview", json=request).json()
+    calls = []
+
+    async def reason(game, question, selected_seat_id, perspective, expected_prompt_sha256):
+        actual = client.app.state.harness.preview(game, question, selected_seat_id, perspective)
+        assert perspective == "player"
+        assert actual.prompt == preview["prompt"]
+        assert expected_prompt_sha256 == preview["prompt_sha256"]
+        assert "STORYTELLER_ONLY_SECRET" not in actual.prompt
+        assert "I learned 1" in actual.prompt
+        calls.append(perspective)
+        return ReasonResponse(answer="Restricted analysis", duration_ms=10)
+
+    monkeypatch.setattr(client.app.state.harness, "reason", reason)
+    url = f"/api/games/{record['id']}/analyses"
+    body = {
+        "event_id": record["timeline"][0]["id"], "question": request["question"],
+        "selected_seat_id": "seat-1", "perspective": "player",
+        "expected_prompt_sha256": preview["prompt_sha256"],
+    }
+    result = client.post(url, json=body)
+    assert result.status_code == 201, result.text
+    assert result.json()["perspective"] == "player"
+    assert result.json()["prompt_sha256"] == preview["prompt_sha256"]
+    assert result.json()["snapshot"] == record["draft"]
+    assert client.post(url, json={**body, "question": "Changed"}).status_code == 409
+    assert client.post(url, json={**body, "selected_seat_id": None}).status_code == 422
+    assert calls == ["player"]
+    archive = client.get(f"/api/games/{record['id']}/export").json()
+    restored = client.post("/api/games/import", json=archive)
+    assert restored.status_code == 201
+    assert restored.json()["analyses"] == [result.json()]

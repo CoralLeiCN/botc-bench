@@ -17,6 +17,7 @@
 ## `reference/README.md`
 
 - https://wiki.bloodontheclocktower.com/Abilities
+- https://wiki.bloodontheclocktower.com/Drunk
 - https://wiki.bloodontheclocktower.com/Glossary
 - https://wiki.bloodontheclocktower.com/Rules_Explanation
 - https://wiki.bloodontheclocktower.com/Setup

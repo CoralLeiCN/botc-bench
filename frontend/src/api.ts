@@ -1,10 +1,11 @@
 import type {
-  GameDraft,
   GameRecord,
   GameSummary,
   GameWrite,
   HarnessStatus,
   ReasonResponse,
+  ReasonRequest,
+  ReasonPreview,
   Script,
 } from "./types";
 
@@ -57,13 +58,16 @@ export const api = {
       body: JSON.stringify({ event_id: eventId, expected_version: version }),
     }),
   harnessStatus: () => request<HarnessStatus>("/api/harness/status"),
-  reason: (game: GameDraft, question: string, selectedSeatId: string | null) =>
+  previewReason: (payload: ReasonRequest, signal?: AbortSignal) =>
+    request<ReasonPreview>("/api/reason/preview", {
+      method: "POST", body: JSON.stringify(payload), signal,
+    }),
+  reason: (payload: ReasonRequest, promptSha256: string) =>
     request<ReasonResponse>("/api/reason", {
       method: "POST",
       body: JSON.stringify({
-        game,
-        question,
-        selected_seat_id: selectedSeatId,
+        ...payload,
+        expected_prompt_sha256: promptSha256,
       }),
     }),
 };

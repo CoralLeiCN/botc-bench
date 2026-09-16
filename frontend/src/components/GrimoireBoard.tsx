@@ -1,10 +1,11 @@
 import type { CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, MousePointer2, Skull, UserRound } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Moon, MousePointer2, Skull, UserRound } from "lucide-react";
 import { allRoles, assignedCounts } from "../game";
 import type { GameDraft, Script, ValidationIssue } from "../types";
 
 interface GrimoireBoardProps {
   replaying?: boolean;
+  nextNightSeatIds?: string[];
   game: GameDraft;
   script: Script;
   selectedSeatId: string | null;
@@ -23,6 +24,7 @@ const phaseLabels: Record<GameDraft["phase"], string> = {
 
 export function GrimoireBoard({
   replaying = false,
+  nextNightSeatIds = [],
   game,
   script,
   selectedSeatId,
@@ -74,10 +76,11 @@ export function GrimoireBoard({
               style={style}
               className={`seat-card ${role?.team ?? "unassigned"} ${
                 selectedSeatId === seat.id ? "selected" : ""
-              } ${seat.alive ? "" : "dead"}`}
+              } ${seat.alive ? "" : "dead"} ${nextNightSeatIds.includes(seat.id) ? "night-next-seat" : ""}`}
               onClick={() => onSeatClick(seat.id)}
-              aria-label={`${seat.position} 号 ${seat.player_name} ${role?.name.zh_hans ?? "未分配"}`}
+              aria-label={`${seat.position} 号 ${seat.player_name} ${role?.name.zh_hans ?? "未分配"}${nextNightSeatIds.includes(seat.id) ? " · 夜间下一步" : ""}`}
             >
+              {nextNightSeatIds.includes(seat.id) && <span className="night-seat-badge"><Moon size={10} /> 下一步</span>}
               <span className="seat-number">{seat.position}</span>
               <span className="seat-status" aria-label={seat.alive ? "存活" : "死亡"}>
                 {seat.alive ? <UserRound size={11} /> : <Skull size={12} />}

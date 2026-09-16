@@ -31,6 +31,18 @@ class ScriptSources(StrictModel):
     english_roles: str
     english_locale: str
     zh_hans: str
+    nightsheet: Optional[str] = None
+
+
+class NightInstruction(StrictModel):
+    id: str
+    name: LocalizedText
+    reminder: LocalizedText
+
+
+class NightOrder(StrictModel):
+    first_night: List[NightInstruction] = Field(default_factory=list)
+    night: List[NightInstruction] = Field(default_factory=list)
 
 
 class Script(StrictModel):
@@ -45,6 +57,7 @@ class Script(StrictModel):
     qa_path: str
     reference_path: str
     sources: ScriptSources
+    night_order: NightOrder = Field(default_factory=NightOrder)
 
 
 class MarkerType(str, Enum):
@@ -133,6 +146,39 @@ class Nomination(StrictModel):
         return self
 
 
+class NightStep(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    instruction_id: Optional[str] = Field(default=None, max_length=80)
+    seat_id: Optional[str] = Field(default=None, max_length=80)
+    title: str = Field(min_length=1, max_length=200)
+    status: Literal["pending", "completed", "skipped"] = "pending"
+    choice: str = Field(default="", max_length=2000)
+    information: str = Field(default="", max_length=2000)
+    decision: str = Field(default="", max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_skip_reason(self) -> "NightStep":
+        if self.status == "skipped" and not self.decision.strip():
+            raise ValueError("skipped night steps require a storyteller decision")
+        return self
+
+
+class NightChecklist(StrictModel):
+    id: str = Field(min_length=1, max_length=80)
+    script_id: str = Field(pattern=r"^script-\d{3}$")
+    phase: Literal["first_night", "night"]
+    day_number: int = Field(ge=0, le=99)
+    steps: List[NightStep] = Field(min_length=1, max_length=200)
+    reviewed_effects: List[str] = Field(default_factory=list, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_step_ids(self) -> "NightChecklist":
+        ids = [step.id for step in self.steps]
+        if len(ids) != len(set(ids)):
+            raise ValueError("night step ids must be unique")
+        return self
+
+
 class GameSnapshot(StrictModel):
     schema_version: Literal[1] = 1
     name: str = Field(default="未命名局面", max_length=120)
@@ -144,6 +190,7 @@ class GameSnapshot(StrictModel):
     day_number: int = Field(default=0, ge=0, le=99)
     notes: str = Field(default="", max_length=5000)
     nominations: List[Nomination] = Field(default_factory=list, max_length=2000)
+    night_checklist: Optional[NightChecklist] = None
 
     @model_validator(mode="after")
     def validate_seats(self) -> "GameSnapshot":

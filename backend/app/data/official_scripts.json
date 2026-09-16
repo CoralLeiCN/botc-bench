@@ -1,15 +1,17 @@
 {
   "schema_version": 1,
-  "retrieved_at": "2026-08-31",
+  "retrieved_at": "2026-09-16",
   "sources": {
     "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
     "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
-    "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+    "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json",
+    "nightsheet": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/nightsheet.json"
   },
   "source_sha256": {
     "english_roles": "6c659354dee75cf3afdeaf6cbc750b274a87d1099cc5f68651a2114881eb85ca",
     "english_locale": "1ed046aec68c340e52bb8530b1ed5ea0b210af571ad0c18def1aed645588614a",
-    "zh_hans": "09a2a4ab383703d927f48409422d310db586825c37dffab428835efd23882ef6"
+    "zh_hans": "09a2a4ab383703d927f48409422d310db586825c37dffab428835efd23882ef6",
+    "nightsheet": "99a2815bb31bcec3e107bf7f1c2fb305e301d317981d855704d3d954ec4c3f75"
   },
   "scripts": [
     {
@@ -548,11 +550,337 @@
       ],
       "qa_path": "scripts/script-002/OFFICIAL_QA.md",
       "reference_path": "scripts/script-002/reference/README.md",
+      "night_order": {
+        "first_night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "bureaucrat",
+            "name": {
+              "en": "Bureaucrat",
+              "zh_hans": "官员"
+            },
+            "reminder": {
+              "en": "The Bureaucrat chooses a player. :reminder:",
+              "zh_hans": "官员选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "thief",
+            "name": {
+              "en": "Thief",
+              "zh_hans": "窃贼"
+            },
+            "reminder": {
+              "en": "The Thief chooses a player. :reminder:",
+              "zh_hans": "窃贼选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "minioninfo",
+            "name": {
+              "en": "Minion Info",
+              "zh_hans": "爪牙信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake all Minions: Show the *THIS IS THE DEMON* token. Point to the Demon. Show the *THESE ARE YOUR MINIONS* token. Point to the other Minions.",
+              "zh_hans": "如果有七名或更多玩家，唤醒所有爪牙：\n 展示“他是恶魔”信息标记。指向恶魔。"
+            }
+          },
+          {
+            "id": "demoninfo",
+            "name": {
+              "en": "Demon Info",
+              "zh_hans": "恶魔信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake the Demon: Show the *THESE ARE YOUR MINIONS* token. Point to all Minions. Show the *THESE CHARACTERS ARE NOT IN PLAY* token. Show 3 not-in-play good character tokens.",
+              "zh_hans": "如果有七名或更多玩家，唤醒恶魔：展示“他们是你的爪牙”信息标记。指向所有爪牙。展示“这些角色不在场”信息标记。展示三个不在场的善良角色。如果其他对恶魔暴露的角色在场，不要让恶魔入睡，而是一并给出相关信息后再让恶魔入睡。"
+            }
+          },
+          {
+            "id": "poisoner",
+            "name": {
+              "en": "Poisoner",
+              "zh_hans": "投毒者"
+            },
+            "reminder": {
+              "en": "The Poisoner chooses a player. :reminder:",
+              "zh_hans": "投毒者选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "washerwoman",
+            "name": {
+              "en": "Washerwoman",
+              "zh_hans": "洗衣妇"
+            },
+            "reminder": {
+              "en": "Show the Townsfolk character token. Point to both the *TOWNSFOLK* and *WRONG* players.",
+              "zh_hans": "指向标记有“镇民”和“错误”的玩家。将标记有“镇民”的玩家标记展示给洗衣妇。"
+            }
+          },
+          {
+            "id": "librarian",
+            "name": {
+              "en": "Librarian",
+              "zh_hans": "图书管理员"
+            },
+            "reminder": {
+              "en": "Show the Outsider character token. Point to both the *OUTSIDER* and *WRONG* players.",
+              "zh_hans": "将有“外来者”的玩家的角色标记展示给图书管理员。并指向标记有“外来者”和“错误”的玩家。"
+            }
+          },
+          {
+            "id": "investigator",
+            "name": {
+              "en": "Investigator",
+              "zh_hans": "调查员"
+            },
+            "reminder": {
+              "en": "Show the Minion character token. Point to both the *MINION* and *WRONG* players.",
+              "zh_hans": "将标记有“爪牙”的玩家的角色标记展示给调查员。并指向标记有“爪牙”和“错误”的玩家。"
+            }
+          },
+          {
+            "id": "chef",
+            "name": {
+              "en": "Chef",
+              "zh_hans": "厨师"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划场上互为邻座的邪恶玩家有多少对（0，1，2，等等）。"
+            }
+          },
+          {
+            "id": "empath",
+            "name": {
+              "en": "Empath",
+              "zh_hans": "共情者"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划与他邻近的邪恶玩家数量（0，1，或2）。"
+            }
+          },
+          {
+            "id": "fortuneteller",
+            "name": {
+              "en": "Fortune Teller",
+              "zh_hans": "占卜师"
+            },
+            "reminder": {
+              "en": "The Fortune Teller chooses 2 players. Nod if either is the Demon (or the *RED HERRING*).",
+              "zh_hans": "占卜师选择两名玩家。如果有恶魔点头表示“是”。（或有“干扰项”）。"
+            }
+          },
+          {
+            "id": "butler",
+            "name": {
+              "en": "Butler",
+              "zh_hans": "管家"
+            },
+            "reminder": {
+              "en": "The Butler chooses a player. :reminder:",
+              "zh_hans": "管家选择一名玩家。reminder:"
+            }
+          },
+          {
+            "id": "spy",
+            "name": {
+              "en": "Spy",
+              "zh_hans": "间谍"
+            },
+            "reminder": {
+              "en": "Show the Grimoire for as long as the Spy needs.",
+              "zh_hans": "让间谍按自己意愿的时长来查看魔典。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ],
+        "night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "bureaucrat",
+            "name": {
+              "en": "Bureaucrat",
+              "zh_hans": "官员"
+            },
+            "reminder": {
+              "en": "The Bureaucrat chooses a player. :reminder:",
+              "zh_hans": "官员选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "thief",
+            "name": {
+              "en": "Thief",
+              "zh_hans": "窃贼"
+            },
+            "reminder": {
+              "en": "The Thief chooses a player. :reminder:",
+              "zh_hans": "窃贼选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "poisoner",
+            "name": {
+              "en": "Poisoner",
+              "zh_hans": "投毒者"
+            },
+            "reminder": {
+              "en": "The Poisoner chooses a player. :reminder:",
+              "zh_hans": "投毒者选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "monk",
+            "name": {
+              "en": "Monk",
+              "zh_hans": "僧侣"
+            },
+            "reminder": {
+              "en": "The Monk chooses a player. :reminder:",
+              "zh_hans": "僧侣选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "scarletwoman",
+            "name": {
+              "en": "Scarlet Woman",
+              "zh_hans": "红唇女郎"
+            },
+            "reminder": {
+              "en": "If the Scarlet Woman became the Demon today, show them the *YOU ARE* token, then the Demon token.",
+              "zh_hans": "如果红唇女郎今天成功变成了恶魔，向她展示“你是”信息标记，然后向她展示恶魔角色标记。"
+            }
+          },
+          {
+            "id": "imp",
+            "name": {
+              "en": "Imp",
+              "zh_hans": "小恶魔"
+            },
+            "reminder": {
+              "en": "The Imp chooses a player. :reminder: If the Imp chose themselves: Replace 1 alive Minion token with a spare Imp token. Put the old Imp to sleep. Wake the new Imp. Show the *YOU ARE* token, then show the Imp token.",
+              "zh_hans": "小恶魔选择一名玩家。:reminder:如果小恶魔选择在夜里自杀，让小恶魔重新入睡。用多出来的小恶魔标记替换一名存活的爪牙玩家的角色标记，让那名玩家的角色改变为小恶魔。唤醒新的小恶魔，向他展示“你是”信息标记，然后向他展示小恶魔角色标记。"
+            }
+          },
+          {
+            "id": "ravenkeeper",
+            "name": {
+              "en": "Ravenkeeper",
+              "zh_hans": "守鸦人"
+            },
+            "reminder": {
+              "en": "If the Ravenkeeper died tonight, the Ravenkeeper chooses a player. Show that player's character token.",
+              "zh_hans": "如果守鸦人在夜晚死去，唤醒他。让守鸦人指向任意一名玩家。对守鸦人展示那名玩家的角色标记。"
+            }
+          },
+          {
+            "id": "empath",
+            "name": {
+              "en": "Empath",
+              "zh_hans": "共情者"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划与他邻近的邪恶玩家数量（0，1，或2）。"
+            }
+          },
+          {
+            "id": "fortuneteller",
+            "name": {
+              "en": "Fortune Teller",
+              "zh_hans": "占卜师"
+            },
+            "reminder": {
+              "en": "The Fortune Teller chooses 2 players. Nod if either is the Demon (or the *RED HERRING*).",
+              "zh_hans": "占卜师选择两名玩家。如果有恶魔点头表示“是”。（或有“干扰项”）。"
+            }
+          },
+          {
+            "id": "undertaker",
+            "name": {
+              "en": "Undertaker",
+              "zh_hans": "送葬者"
+            },
+            "reminder": {
+              "en": "If a player was executed today, show their character token.",
+              "zh_hans": "展示被标记了“死于今日”的角色标记。"
+            }
+          },
+          {
+            "id": "butler",
+            "name": {
+              "en": "Butler",
+              "zh_hans": "管家"
+            },
+            "reminder": {
+              "en": "The Butler chooses a player. :reminder:",
+              "zh_hans": "管家选择一名玩家。reminder:"
+            }
+          },
+          {
+            "id": "spy",
+            "name": {
+              "en": "Spy",
+              "zh_hans": "间谍"
+            },
+            "reminder": {
+              "en": "Show the Grimoire for as long as the Spy needs.",
+              "zh_hans": "让间谍按自己意愿的时长来查看魔典。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ]
+      },
       "sources": {
         "edition": "https://wiki.bloodontheclocktower.com/Trouble_Brewing",
         "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
         "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
-        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json",
+        "nightsheet": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/nightsheet.json"
       }
     },
     {
@@ -1185,11 +1513,392 @@
       ],
       "qa_path": "scripts/script-003/OFFICIAL_QA.md",
       "reference_path": "scripts/script-003/reference/README.md",
+      "night_order": {
+        "first_night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "apprentice",
+            "name": {
+              "en": "Apprentice",
+              "zh_hans": "学徒"
+            },
+            "reminder": {
+              "en": "Show the *YOU ARE* info token, then a Townsfolk or Minion token. Swap the Apprentice & Townsfolk or Minion tokens. :reminder:",
+              "zh_hans": "向学徒展示“你是”信息标记，然后展示一个镇民或爪牙的角色标记。在魔典上，将学徒的角色标记替换为刚刚展示的角色标记，并放置“是学徒”提示标记。"
+            }
+          },
+          {
+            "id": "minioninfo",
+            "name": {
+              "en": "Minion Info",
+              "zh_hans": "爪牙信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake all Minions: Show the *THIS IS THE DEMON* token. Point to the Demon. Show the *THESE ARE YOUR MINIONS* token. Point to the other Minions.",
+              "zh_hans": "如果有七名或更多玩家，唤醒所有爪牙：\n 展示“他是恶魔”信息标记。指向恶魔。"
+            }
+          },
+          {
+            "id": "lunatic",
+            "name": {
+              "en": "Lunatic",
+              "zh_hans": "疯子"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake the Lunatic: Show the *THESE ARE YOUR MINIONS* token. Point to any players. Show the *THESE CHARACTERS ARE NOT IN PLAY* token. Show 3 good character tokens. Put the Lunatic to sleep. Wake the Demon. Show the *YOU ARE* info token and the Demon token. Show the *THIS PLAYER IS* info token and the Lunatic token, then point to the Lunatic.",
+              "zh_hans": "如果有七名或更多玩家，唤醒疯子，如同他是恶魔一般进行行动。向疯子展示“他们是你的爪牙”信息标记并指向若干名玩家，数量等同于在场的爪牙数量。向疯子展示任意三个善良角色标记作为他的“伪装”。让疯子重新入睡。唤醒恶魔。向恶魔展示“你是”信息标记，然后是他的恶魔角色标记。向恶魔展示“这名玩家是”信息标记，然后是疯子角色标记，然后指向疯子玩家。"
+            }
+          },
+          {
+            "id": "demoninfo",
+            "name": {
+              "en": "Demon Info",
+              "zh_hans": "恶魔信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake the Demon: Show the *THESE ARE YOUR MINIONS* token. Point to all Minions. Show the *THESE CHARACTERS ARE NOT IN PLAY* token. Show 3 not-in-play good character tokens.",
+              "zh_hans": "如果有七名或更多玩家，唤醒恶魔：展示“他们是你的爪牙”信息标记。指向所有爪牙。展示“这些角色不在场”信息标记。展示三个不在场的善良角色。如果其他对恶魔暴露的角色在场，不要让恶魔入睡，而是一并给出相关信息后再让恶魔入睡。"
+            }
+          },
+          {
+            "id": "sailor",
+            "name": {
+              "en": "Sailor",
+              "zh_hans": "水手"
+            },
+            "reminder": {
+              "en": "The Sailor chooses a living player. :reminder:",
+              "zh_hans": "水手选择一名存活玩家。:reminder:"
+            }
+          },
+          {
+            "id": "courtier",
+            "name": {
+              "en": "Courtier",
+              "zh_hans": "侍臣"
+            },
+            "reminder": {
+              "en": "The Courtier might choose a character. :reminder: :reminder:",
+              "zh_hans": "侍臣可以选择一个角色:reminder: :reminder:"
+            }
+          },
+          {
+            "id": "godfather",
+            "name": {
+              "en": "Godfather",
+              "zh_hans": "教父"
+            },
+            "reminder": {
+              "en": "Show the character tokens of all in-play Outsiders.",
+              "zh_hans": "展示所有在场的外来者的角色标记。"
+            }
+          },
+          {
+            "id": "devilsadvocate",
+            "name": {
+              "en": "Devil's Advocate",
+              "zh_hans": "魔鬼代言人"
+            },
+            "reminder": {
+              "en": "The Devil's Advocate chooses a living player. :reminder:",
+              "zh_hans": "魔鬼代言人选择一名存活玩家。:reminder:"
+            }
+          },
+          {
+            "id": "pukka",
+            "name": {
+              "en": "Pukka",
+              "zh_hans": "普卡"
+            },
+            "reminder": {
+              "en": "The Pukka chooses a player. :reminder:",
+              "zh_hans": "普卡选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "grandmother",
+            "name": {
+              "en": "Grandmother",
+              "zh_hans": "祖母"
+            },
+            "reminder": {
+              "en": "Point to the grandchild player & show their character token.",
+              "zh_hans": "向祖母展示标有“孙子”的玩家的角色标记，然后指向该名“孙子”玩家。"
+            }
+          },
+          {
+            "id": "chambermaid",
+            "name": {
+              "en": "Chambermaid",
+              "zh_hans": "侍女"
+            },
+            "reminder": {
+              "en": "The Chambermaid chooses 2 living players. Give a finger signal.",
+              "zh_hans": "侍女指向除自己外任意两名存活的玩家。用手势向侍女比划出所选角色中当晚被唤醒过的数量（0，1，或2）。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ],
+        "night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "sailor",
+            "name": {
+              "en": "Sailor",
+              "zh_hans": "水手"
+            },
+            "reminder": {
+              "en": "The Sailor chooses a living player. :reminder:",
+              "zh_hans": "水手选择一名存活玩家。:reminder:"
+            }
+          },
+          {
+            "id": "courtier",
+            "name": {
+              "en": "Courtier",
+              "zh_hans": "侍臣"
+            },
+            "reminder": {
+              "en": "The Courtier might choose a character. :reminder: :reminder:",
+              "zh_hans": "侍臣可以选择一个角色:reminder: :reminder:"
+            }
+          },
+          {
+            "id": "innkeeper",
+            "name": {
+              "en": "Innkeeper",
+              "zh_hans": "旅店老板"
+            },
+            "reminder": {
+              "en": "The Innkeeper chooses 2 players. :reminder: :reminder: :reminder:",
+              "zh_hans": "旅店老板选择任意两名玩家。 :reminder: :reminder: :reminder:"
+            }
+          },
+          {
+            "id": "gambler",
+            "name": {
+              "en": "Gambler",
+              "zh_hans": "赌徒"
+            },
+            "reminder": {
+              "en": "The Gambler chooses a player & a character. :reminder:",
+              "zh_hans": "赌徒选择一名玩家&一个角色。:reminder:"
+            }
+          },
+          {
+            "id": "devilsadvocate",
+            "name": {
+              "en": "Devil's Advocate",
+              "zh_hans": "魔鬼代言人"
+            },
+            "reminder": {
+              "en": "The Devil's Advocate chooses a living player. :reminder:",
+              "zh_hans": "魔鬼代言人选择一名存活玩家。:reminder:"
+            }
+          },
+          {
+            "id": "lunatic",
+            "name": {
+              "en": "Lunatic",
+              "zh_hans": "疯子"
+            },
+            "reminder": {
+              "en": "Do whatever needs to be done to simulate the Demon acting. Put the Lunatic to sleep. Wake the Demon. Show the Lunatic token & point to them, then their target(s).",
+              "zh_hans": "如果疯子以为的恶魔会在当晚行动，唤醒疯子，并让他以恶魔的方式行动。让疯子重新入睡。唤醒真正的恶魔，指向疯子玩家，向真正的恶魔展示疯子标记，然后指向疯子选择的玩家。"
+            }
+          },
+          {
+            "id": "exorcist",
+            "name": {
+              "en": "Exorcist",
+              "zh_hans": "驱魔人"
+            },
+            "reminder": {
+              "en": "The Exorcist chooses a player. :reminder: Put the Exorcist to sleep. If the Exorcist chose the Demon: Wake the Demon. Show the *THIS CHARACTER SELECTED YOU* & Exorcist tokens. Point to the Exorcist.",
+              "zh_hans": "驱魔人选择一名玩家。:reminder: 让驱魔人重新入睡。如果驱魔人选择了恶魔，唤醒恶魔。向恶魔展示“该角色的能力对你生效”信息标记以及驱魔人角色标记，然后指向驱魔人玩家。"
+            }
+          },
+          {
+            "id": "zombuul",
+            "name": {
+              "en": "Zombuul",
+              "zh_hans": "僵怖"
+            },
+            "reminder": {
+              "en": "If no one died today, the Zombuul chooses a player. :reminder:",
+              "zh_hans": "如果今天有玩家死亡，僵怖选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "pukka",
+            "name": {
+              "en": "Pukka",
+              "zh_hans": "普卡"
+            },
+            "reminder": {
+              "en": "The Pukka chooses a player. :reminder: The previously poisoned player dies then becomes healthy. :reminder:",
+              "zh_hans": "普卡选择一名玩家。:reminder:之前因普卡中毒的玩家死亡，随后恢复健康。:reminder:"
+            }
+          },
+          {
+            "id": "shabaloth",
+            "name": {
+              "en": "Shabaloth",
+              "zh_hans": "沙巴洛斯"
+            },
+            "reminder": {
+              "en": "A previously chosen player might be resurrected. :reminder: The Shabaloth chooses 2 players. :reminder: :reminder:",
+              "zh_hans": "上一晚被沙巴洛斯选中的玩家可能会被反刍。:reminder:沙巴洛斯选择两名玩家。 :reminder: :reminder:"
+            }
+          },
+          {
+            "id": "po",
+            "name": {
+              "en": "Po",
+              "zh_hans": "珀"
+            },
+            "reminder": {
+              "en": "The Po may choose a player OR chooses 3 players if they chose no-one last night. :reminder: or :reminder: :reminder: :reminder:",
+              "zh_hans": "珀可以选择一名玩家或在上一晚未选择任何玩家的情况下选择三名玩家。:reminder: 或者 :reminder: :reminder: :reminder:"
+            }
+          },
+          {
+            "id": "assassin",
+            "name": {
+              "en": "Assassin",
+              "zh_hans": "刺客"
+            },
+            "reminder": {
+              "en": "The Assassin might choose a player. :reminder: :reminder:",
+              "zh_hans": "刺客可以选择一名玩家。:reminder: :reminder:"
+            }
+          },
+          {
+            "id": "godfather",
+            "name": {
+              "en": "Godfather",
+              "zh_hans": "教父"
+            },
+            "reminder": {
+              "en": "If an Outsider died today, the Godfather chooses a player. :reminder:",
+              "zh_hans": "如果一名外来者在白天死亡，让教父选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "gossip",
+            "name": {
+              "en": "Gossip",
+              "zh_hans": "造谣者"
+            },
+            "reminder": {
+              "en": "If the Gossip is due to kill a player, they die. :reminder:",
+              "zh_hans": "如果今天白天造谣者发表了一个明确且正确的公开声明，说书人选择任意一名玩家死亡。:reminder:"
+            }
+          },
+          {
+            "id": "professor",
+            "name": {
+              "en": "Professor",
+              "zh_hans": "教授"
+            },
+            "reminder": {
+              "en": "The Professor might choose a dead player. :reminder: :reminder:",
+              "zh_hans": "教授可以一名已死亡的玩家。:reminder: :reminder:"
+            }
+          },
+          {
+            "id": "tinker",
+            "name": {
+              "en": "Tinker",
+              "zh_hans": "修补匠"
+            },
+            "reminder": {
+              "en": "The Tinker might die. :reminder:",
+              "zh_hans": "修补匠可能死亡。:reminder:"
+            }
+          },
+          {
+            "id": "moonchild",
+            "name": {
+              "en": "Moonchild",
+              "zh_hans": "月之子"
+            },
+            "reminder": {
+              "en": "If the Moonchild is due to kill a good player, they die. :reminder:",
+              "zh_hans": "如果月之子所选玩家是善良的，他死亡。:reminder:"
+            }
+          },
+          {
+            "id": "grandmother",
+            "name": {
+              "en": "Grandmother",
+              "zh_hans": "祖母"
+            },
+            "reminder": {
+              "en": "If the grandchild was killed by the Demon, the Grandmother dies too. :reminder:",
+              "zh_hans": "如果恶魔杀死了“孙子”，祖母死亡。:reminder:"
+            }
+          },
+          {
+            "id": "chambermaid",
+            "name": {
+              "en": "Chambermaid",
+              "zh_hans": "侍女"
+            },
+            "reminder": {
+              "en": "The Chambermaid chooses 2 living players. Give a finger signal.",
+              "zh_hans": "侍女指向除自己外任意两名存活的玩家。用手势向侍女比划出所选角色中当晚被唤醒过的数量（0，1，或2）。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ]
+      },
       "sources": {
         "edition": "https://wiki.bloodontheclocktower.com/Bad_Moon_Rising",
         "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
         "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
-        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json",
+        "nightsheet": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/nightsheet.json"
       }
     },
     {
@@ -1815,11 +2524,436 @@
       ],
       "qa_path": "scripts/script-004/OFFICIAL_QA.md",
       "reference_path": "scripts/script-004/reference/README.md",
+      "night_order": {
+        "first_night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "barista",
+            "name": {
+              "en": "Barista",
+              "zh_hans": "咖啡师"
+            },
+            "reminder": {
+              "en": "Choose a player. Wake them, show the *THIS CHARACTER SELECTED YOU* & Barista tokens, then give a finger signal. :reminder:",
+              "zh_hans": "选择一名玩家，唤醒并告知他咖啡师的哪种能力效果对他生效。根据此效果触发能力结算（清醒且健康或行动两次）。"
+            }
+          },
+          {
+            "id": "philosopher",
+            "name": {
+              "en": "Philosopher",
+              "zh_hans": "哲学家"
+            },
+            "reminder": {
+              "en": "The Philosopher might choose a character. If necessary, swap their character token. :reminder:",
+              "zh_hans": "哲学家可以选择一个善良角色。如有需要，将哲学家角色标记更换为他所选的角色标记。:reminder:"
+            }
+          },
+          {
+            "id": "minioninfo",
+            "name": {
+              "en": "Minion Info",
+              "zh_hans": "爪牙信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake all Minions: Show the *THIS IS THE DEMON* token. Point to the Demon. Show the *THESE ARE YOUR MINIONS* token. Point to the other Minions.",
+              "zh_hans": "如果有七名或更多玩家，唤醒所有爪牙：\n 展示“他是恶魔”信息标记。指向恶魔。"
+            }
+          },
+          {
+            "id": "demoninfo",
+            "name": {
+              "en": "Demon Info",
+              "zh_hans": "恶魔信息"
+            },
+            "reminder": {
+              "en": "If there are 7 or more players, wake the Demon: Show the *THESE ARE YOUR MINIONS* token. Point to all Minions. Show the *THESE CHARACTERS ARE NOT IN PLAY* token. Show 3 not-in-play good character tokens.",
+              "zh_hans": "如果有七名或更多玩家，唤醒恶魔：展示“他们是你的爪牙”信息标记。指向所有爪牙。展示“这些角色不在场”信息标记。展示三个不在场的善良角色。如果其他对恶魔暴露的角色在场，不要让恶魔入睡，而是一并给出相关信息后再让恶魔入睡。"
+            }
+          },
+          {
+            "id": "snakecharmer",
+            "name": {
+              "en": "Snake Charmer",
+              "zh_hans": "舞蛇人"
+            },
+            "reminder": {
+              "en": "The Snake Charmer chooses a player. If they chose the Demon: Show the *YOU ARE* & Demon tokens. Give a thumbs down. Swap the Snake Charmer & Demon tokens. Put the old Snake Charmer to sleep. Wake the old Demon. Show the *YOU ARE* and Snake Charmer tokens & give a thumbs up. :reminder:",
+              "zh_hans": "舞蛇人选择一名玩家。如果被选择的玩家是恶魔，展示“你是”信息标记、向下的大拇指、 “你是”信息标记、然后是恶魔的角色标记。让旧舞蛇人重新入睡。唤醒旧的恶魔并依次向他展示“你是”信息标记、向上的大拇指、“你是”信息标记、然后是舞蛇人的角色标记。:reminder:"
+            }
+          },
+          {
+            "id": "eviltwin",
+            "name": {
+              "en": "Evil Twin",
+              "zh_hans": "镜像双子"
+            },
+            "reminder": {
+              "en": "Wake both twins. Allow eye contact. Show the good twin's character token to the Evil Twin & vice versa.",
+              "zh_hans": "同时唤醒两名双子。指向邪恶双子，并对善良双子展示邪恶双子的角色标记。指向善良双子，并对邪恶双子展示善良双子的角色标记。"
+            }
+          },
+          {
+            "id": "witch",
+            "name": {
+              "en": "Witch",
+              "zh_hans": "女巫"
+            },
+            "reminder": {
+              "en": "The Witch chooses a player. :reminder:",
+              "zh_hans": "女巫选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "cerenovus",
+            "name": {
+              "en": "Cerenovus",
+              "zh_hans": "洗脑师"
+            },
+            "reminder": {
+              "en": "The Cerenovus chooses a player & a character. :reminder: Put the Cerenovus to sleep. Wake the target. Show the *THIS CHARACTER SELECTED YOU* token, the Cerenovus token, then the madness-character token.",
+              "zh_hans": "洗脑师指向一名玩家和角色列表上一个镇民或外来者图标。让洗脑师重新入睡。为这名玩家放置“疯狂”提示标记并唤醒这名玩家，依次向他展示“该角色的能力对你生效”信息标记、洗脑师的角色标记、他要疯狂证明的角色标记。"
+            }
+          },
+          {
+            "id": "clockmaker",
+            "name": {
+              "en": "Clockmaker",
+              "zh_hans": "钟表匠"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划数字来表示恶魔与爪牙之间最近的距离(1，2，3等）。"
+            }
+          },
+          {
+            "id": "dreamer",
+            "name": {
+              "en": "Dreamer",
+              "zh_hans": "筑梦师"
+            },
+            "reminder": {
+              "en": "The Dreamer points to a player. Show 1 good & 1 evil character token, 1 of which is their character.",
+              "zh_hans": "筑梦师选择一名玩家。展示一个善良角色和一个邪恶角色的角色标记，其中一个是该玩家的角色。"
+            }
+          },
+          {
+            "id": "seamstress",
+            "name": {
+              "en": "Seamstress",
+              "zh_hans": "女裁缝"
+            },
+            "reminder": {
+              "en": "The Seamstress might choose 2 players. Nod or shake your head. :reminder:",
+              "zh_hans": "女裁缝可以选择两名玩家。要么点头代表是，要么摇头代表否。:reminder:"
+            }
+          },
+          {
+            "id": "mathematician",
+            "name": {
+              "en": "Mathematician",
+              "zh_hans": "数学家"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划数字（0，1，2 等）。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ],
+        "night": [
+          {
+            "id": "dusk",
+            "name": {
+              "en": "Dusk",
+              "zh_hans": "黄昏"
+            },
+            "reminder": {
+              "en": "Start the Night Phase.",
+              "zh_hans": "夜晚阶段开始。"
+            }
+          },
+          {
+            "id": "barista",
+            "name": {
+              "en": "Barista",
+              "zh_hans": "咖啡师"
+            },
+            "reminder": {
+              "en": "Choose a player. Wake them, show the *THIS CHARACTER SELECTED YOU* & Barista tokens, then give a finger signal. :reminder:",
+              "zh_hans": "选择一名玩家，唤醒并告知他咖啡师的哪种能力效果对他生效。根据此效果触发能力结算（清醒且健康或行动两次）。"
+            }
+          },
+          {
+            "id": "harlot",
+            "name": {
+              "en": "Harlot",
+              "zh_hans": "流莺"
+            },
+            "reminder": {
+              "en": "The Harlot chooses a living player. Put the Harlot to sleep. Wake the chosen player, show them the *THIS CHARACTER SELECTED YOU* token, then the Harlot token. If that player nods their head, wake the Harlot and show them the chosen player's character token. Both players might die. :reminder: :reminder:",
+              "zh_hans": "让流莺指向任意一名玩家。让流莺重新入睡。唤醒被选中的玩家，对该玩家展示“该角色的能力对你生效”提示标记和流莺角色标记。该玩家需要通过点头表示是，摇头表示否。如果被选择的玩家点头了表示是，则唤醒流莺并向流莺展示被选择的玩家的角色标记。然后，你可能决定让两名玩家都死亡。"
+            }
+          },
+          {
+            "id": "bonecollector",
+            "name": {
+              "en": "Bone Collector",
+              "zh_hans": "集骨者"
+            },
+            "reminder": {
+              "en": "The Bone Collector might choose a dead player. :reminder: If necessary, wake the chosen player to use their ability.",
+              "zh_hans": "集骨者要么摇头表示不使用能力，或者是指向任何一名已死亡的玩家。如果集骨者指向了一名已死亡的玩家，被选中的玩家会重新获得其角色能力——用集骨者的“重获能力”提示标记标记该角色 :reminder:。（可能需要在夜里唤醒该玩家，让其使用刚恢复的角色能力）。"
+            }
+          },
+          {
+            "id": "philosopher",
+            "name": {
+              "en": "Philosopher",
+              "zh_hans": "哲学家"
+            },
+            "reminder": {
+              "en": "The Philosopher might choose a character. If necessary, swap their character token. :reminder:",
+              "zh_hans": "哲学家可以选择一个善良角色。如有需要，将哲学家角色标记更换为他所选的角色标记。:reminder:"
+            }
+          },
+          {
+            "id": "snakecharmer",
+            "name": {
+              "en": "Snake Charmer",
+              "zh_hans": "舞蛇人"
+            },
+            "reminder": {
+              "en": "The Snake Charmer chooses a player. If they chose the Demon: Show the *YOU ARE* & Demon tokens. Give a thumbs down. Swap the Snake Charmer & Demon tokens. Put the old Snake Charmer to sleep. Wake the old Demon. Show the *YOU ARE* and Snake Charmer tokens & give a thumbs up. :reminder:",
+              "zh_hans": "舞蛇人选择一名玩家。如果被选择的玩家是恶魔，展示“你是”信息标记、向下的大拇指、 “你是”信息标记、然后是恶魔的角色标记。让旧舞蛇人重新入睡。唤醒旧的恶魔并依次向他展示“你是”信息标记、向上的大拇指、“你是”信息标记、然后是舞蛇人的角色标记。:reminder:"
+            }
+          },
+          {
+            "id": "witch",
+            "name": {
+              "en": "Witch",
+              "zh_hans": "女巫"
+            },
+            "reminder": {
+              "en": "The Witch chooses a player. :reminder:",
+              "zh_hans": "女巫选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "cerenovus",
+            "name": {
+              "en": "Cerenovus",
+              "zh_hans": "洗脑师"
+            },
+            "reminder": {
+              "en": "The Cerenovus chooses a player & a character. :reminder: Put the Cerenovus to sleep. Wake the target. Show the *THIS CHARACTER SELECTED YOU* token, the Cerenovus token, then the madness-character token.",
+              "zh_hans": "洗脑师指向一名玩家和角色列表上一个镇民或外来者图标。让洗脑师重新入睡。为这名玩家放置“疯狂”提示标记并唤醒这名玩家，依次向他展示“该角色的能力对你生效”信息标记、洗脑师的角色标记、他要疯狂证明的角色标记。"
+            }
+          },
+          {
+            "id": "pithag",
+            "name": {
+              "en": "Pit-Hag",
+              "zh_hans": "麻脸巫婆"
+            },
+            "reminder": {
+              "en": "The Pit-Hag chooses a player & a character. If they chose a character that is not in play: Put the Pit-Hag to sleep. Wake the target. Show the *YOU ARE* token & their new character token.",
+              "zh_hans": "指向一名玩家和角色列表上的一个角色图标。让麻脸巫婆重新入睡。如果她选择的角色不在场，则唤醒所选玩家。依次向他展示“你是”信息标记、他的新角色标记。"
+            }
+          },
+          {
+            "id": "fanggu",
+            "name": {
+              "en": "Fang Gu",
+              "zh_hans": "方古"
+            },
+            "reminder": {
+              "en": "The Fang Gu chooses a player. :reminder: If they chose an Outsider (once only): Replace the Outsider token with the spare Fang Gu token. Put the Fang Gu to sleep. Wake the target. Show the *YOU ARE* and Fang Gu tokens & give a thumbs-down. :reminder:",
+              "zh_hans": "方古选择一名玩家。 :reminder:如果选中外来者（限一次）：方古重新入睡。用多出的方古标记替换他的角色标记，且他转为邪恶阵营。唤醒被选择的外来者。依次向他展示“你是”信息标记、向下的大拇指、方古角色标记。:reminder:"
+            }
+          },
+          {
+            "id": "nodashii",
+            "name": {
+              "en": "No Dashii",
+              "zh_hans": "诺-达鲺"
+            },
+            "reminder": {
+              "en": "The No Dashii chooses a player. :reminder:",
+              "zh_hans": "诺-达鲺选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "vortox",
+            "name": {
+              "en": "Vortox",
+              "zh_hans": "涡流"
+            },
+            "reminder": {
+              "en": "The Vortox chooses a player. :reminder:",
+              "zh_hans": "涡流选择一名玩家。:reminder:"
+            }
+          },
+          {
+            "id": "vigormortis",
+            "name": {
+              "en": "Vigormortis",
+              "zh_hans": "亡骨魔"
+            },
+            "reminder": {
+              "en": "The Vigormortis chooses a player. :reminder: If that player is a Minion, poison a neighboring Townsfolk. :reminder: :reminder:",
+              "zh_hans": "亡骨魔选择一名玩家。 :reminder:如果被选择的玩家是爪牙，距离爪牙顺时针或逆时针最近的镇民玩家中毒。:reminder: :reminder:"
+            }
+          },
+          {
+            "id": "barber",
+            "name": {
+              "en": "Barber",
+              "zh_hans": "理发师"
+            },
+            "reminder": {
+              "en": "If the Barber died today or tonight, show the Demon the *THIS CHARACTER SELECTED YOU* & Barber tokens. If the Demon chose 2 players, wake one at a time. Show the *YOU ARE* token & their new character token.",
+              "zh_hans": "在理发师死亡的夜晚，唤醒一名恶魔玩家。向他展示“该角色的能力对你生效”信息标记，理发师角色标记。如果恶魔指向两名玩家，交换那两名玩家的角色标记。然后分别单独唤醒两名被交换的玩家，并展示“你是”信息标记、新的角色标记，再让他们重新入睡。"
+            }
+          },
+          {
+            "id": "sweetheart",
+            "name": {
+              "en": "Sweetheart",
+              "zh_hans": "心上人"
+            },
+            "reminder": {
+              "en": "If the Sweetheart died, a player became drunk immediately. If you haven't done this yet, do so now. :reminder:",
+              "zh_hans": "如果心上人死亡，你选择任一玩家醉酒，为他放置“醉酒”提示标记。:reminder:"
+            }
+          },
+          {
+            "id": "sage",
+            "name": {
+              "en": "Sage",
+              "zh_hans": "贤者"
+            },
+            "reminder": {
+              "en": "If the Demon killed the Sage, wake the Sage and point to 2 players, 1 of which is the Demon.",
+              "zh_hans": "如果贤者被恶魔杀死，唤醒贤者。指向两名玩家，其中一名是杀死贤者的恶魔。"
+            }
+          },
+          {
+            "id": "dreamer",
+            "name": {
+              "en": "Dreamer",
+              "zh_hans": "筑梦师"
+            },
+            "reminder": {
+              "en": "The Dreamer points to a player. Show 1 good & 1 evil character token, 1 of which is their character.",
+              "zh_hans": "筑梦师选择一名玩家。展示一个善良角色和一个邪恶角色的角色标记，其中一个是该玩家的角色。"
+            }
+          },
+          {
+            "id": "flowergirl",
+            "name": {
+              "en": "Flowergirl",
+              "zh_hans": "卖花女孩"
+            },
+            "reminder": {
+              "en": "Either nod or shake your head.",
+              "zh_hans": "果卖花女孩被标记为“恶魔未投票”，摇头告知否。如果卖花女孩被标记为“恶魔已投票”，点头告知是。"
+            }
+          },
+          {
+            "id": "towncrier",
+            "name": {
+              "en": "Town Crier",
+              "zh_hans": "城镇公告员"
+            },
+            "reminder": {
+              "en": "Either nod or shake your head.",
+              "zh_hans": "点头告知是。摇头告知否。"
+            }
+          },
+          {
+            "id": "oracle",
+            "name": {
+              "en": "Oracle",
+              "zh_hans": "神谕者"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划已死亡的邪恶玩家的数量 (0，1，2等）。"
+            }
+          },
+          {
+            "id": "seamstress",
+            "name": {
+              "en": "Seamstress",
+              "zh_hans": "女裁缝"
+            },
+            "reminder": {
+              "en": "The Seamstress might choose 2 players. Nod or shake your head. :reminder:",
+              "zh_hans": "女裁缝可以选择两名玩家。要么点头代表是，要么摇头代表否。:reminder:"
+            }
+          },
+          {
+            "id": "juggler",
+            "name": {
+              "en": "Juggler",
+              "zh_hans": "杂耍艺人"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划等同于“猜测正确”提示标记的数量（0，1，2 等）。"
+            }
+          },
+          {
+            "id": "mathematician",
+            "name": {
+              "en": "Mathematician",
+              "zh_hans": "数学家"
+            },
+            "reminder": {
+              "en": "Give a finger signal.",
+              "zh_hans": "用手势比划数字（0，1，2 等）。"
+            }
+          },
+          {
+            "id": "dawn",
+            "name": {
+              "en": "Dawn",
+              "zh_hans": "黎明"
+            },
+            "reminder": {
+              "en": "Wait for a few seconds. End the Night Phase.",
+              "zh_hans": "稍等一会。结束夜晚阶段。"
+            }
+          }
+        ]
+      },
       "sources": {
         "edition": "https://wiki.bloodontheclocktower.com/Sects_%26_Violets",
         "english_roles": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/roles.json",
         "english_locale": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/en.json",
-        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json"
+        "zh_hans": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-translations/main/game/zh_Hans.json",
+        "nightsheet": "https://raw.githubusercontent.com/ThePandemoniumInstitute/botc-release/main/resources/data/nightsheet.json"
       }
     }
   ]

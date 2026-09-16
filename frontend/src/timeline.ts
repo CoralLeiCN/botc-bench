@@ -1,4 +1,58 @@
-import type { GameDraft, Script, TimelineEntry } from "./types";
+import type { EventDetails, GameDraft, ManualEventKind, Script, TimelineEntry } from "./types";
+
+export const EVENT_LABELS = {
+  initial: "起点", change: "局面变化", note: "说书人记录", branch: "分支",
+  action: "行动", information: "信息", death: "死亡", revival: "复活", role_change: "角色变化",
+  phase: "阶段变化", undo: "撤销", redo: "重做",
+};
+export type EventCategory = keyof typeof EVENT_LABELS;
+
+/** Derive state changes from snapshots, including older untyped histories. */
+export function eventCategories(entry: TimelineEntry, previous?: TimelineEntry): EventCategory[] {
+  const categories: EventCategory[] = [entry.kind];
+  if (!previous) return categories;
+  if (entry.snapshot.phase !== previous.snapshot.phase || entry.snapshot.day_number !== previous.snapshot.day_number) {
+    categories.push("phase");
+  }
+  for (const seat of entry.snapshot.seats) {
+    const before = previous.snapshot.seats.find((item) => item.id === seat.id);
+    if (!before) continue;
+    if (before.alive !== seat.alive) categories.push(seat.alive ? "revival" : "death");
+    if (before.role_id !== seat.role_id) categories.push("role_change");
+  }
+  return [...new Set(categories)];
+}
+
+/** Group consecutive phases, so revisiting a phase never reorders history. */
+export function timelineChapters(entries: TimelineEntry[]) {
+  const chapters: { id: string; label: string; start: number; end: number }[] = [];
+  entries.forEach((entry, index) => {
+    const previous = entries[index - 1]?.snapshot;
+    if (!previous || previous.phase !== entry.snapshot.phase || previous.day_number !== entry.snapshot.day_number) {
+      chapters.push({ id: entry.id, label: phaseLabel(entry.snapshot), start: index, end: index });
+    } else {
+      chapters[chapters.length - 1].end = index;
+    }
+  });
+  return chapters;
+}
+
+export function createManualEntry(snapshot: GameDraft, kind: ManualEventKind, note: string, details: EventDetails): TimelineEntry {
+  const entry = createEntry(snapshot, EVENT_LABELS[kind], kind, note.trim());
+  if (kind !== "note") entry.details = structuredClone(details);
+  return entry;
+}
+
+export function eventParticipants(entry: TimelineEntry): string {
+  if (!entry.details) return "";
+  const name = (id: string) => {
+    const seat = entry.snapshot.seats.find((item) => item.id === id);
+    return seat ? `${seat.position} 号 ${seat.player_name}` : id;
+  };
+  const actor = entry.details.actor_seat_id ? name(entry.details.actor_seat_id) : "说书人";
+  const targets = entry.details.target_seat_ids.map(name).join("、");
+  return targets ? `${actor} → ${targets}` : actor;
+}
 
 export function phaseLabel(game: Pick<GameDraft, "phase" | "day_number">): string {
   if (game.phase === "setup") return "配置中";

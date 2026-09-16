@@ -123,13 +123,21 @@ export interface GameWrite extends GameDraft {
   timeline?: TimelineEntry[];
 }
 
+export interface EventDetails {
+  actor_seat_id: string | null;
+  target_seat_ids: string[];
+}
+
+export type ManualEventKind = "note" | "action" | "information";
+
 export interface TimelineEntry {
   id: string;
   recorded_at: string;
-  kind: "initial" | "change" | "note" | "branch" | "undo" | "redo";
+  kind: "initial" | "change" | "branch" | "undo" | "redo" | ManualEventKind;
   summary: string;
   note: string;
   snapshot: GameDraft;
+  details?: EventDetails | null;
 }
 
 export interface BranchOrigin {

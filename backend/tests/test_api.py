@@ -147,7 +147,8 @@ def test_timeline_round_trip_and_branch_isolation(client: TestClient) -> None:
     payload = draft_payload()
     initial = timeline_event(payload)
     payload["phase"] = "first_night"
-    night = timeline_event(payload, "event-2", "note", "共情者得知 1")
+    night = timeline_event(payload, "event-2", "information", "共情者得知 1")
+    night["details"] = {"actor_seat_id": None, "target_seat_ids": ["seat-1"]}
     payload["seats"][0]["alive"] = False
     death = timeline_event(payload, "event-3", "change")
     created = client.post("/api/games", json={**payload, "timeline": [initial, night, death]})
@@ -158,6 +159,7 @@ def test_timeline_round_trip_and_branch_isolation(client: TestClient) -> None:
     assert len(reloaded["timeline"]) == 3
     assert reloaded["timeline"][0]["snapshot"]["phase"] == "setup"
     assert reloaded["timeline"][1]["note"] == "共情者得知 1"
+    assert reloaded["timeline"][1]["details"] == night["details"]
     assert reloaded["timeline"][1]["snapshot"]["seats"][0]["alive"] is True
     assert reloaded["timeline"][2]["snapshot"]["seats"][0]["alive"] is False
 
@@ -360,7 +362,11 @@ def test_analysis_keeps_original_snapshot_during_edits(client: TestClient, monke
 def test_duplicate_and_archive_round_trip_preserve_history_and_analyses(
     client: TestClient, monkeypatch,
 ) -> None:
-    record = client.post("/api/games", json=draft_payload()).json()
+    payload = draft_payload()
+    payload["night_checklist"] = night_checklist_payload()
+    event = timeline_event(payload, kind="information", note="Empath learned 1")
+    event["details"] = {"actor_seat_id": "seat-1", "target_seat_ids": ["seat-2"]}
+    record = client.post("/api/games", json={**payload, "timeline": [event]}).json()
     analysis = save_test_analysis(client, record, monkeypatch)
     url = f"/api/games/{record['id']}"
     source = client.get(url).json()
@@ -574,3 +580,24 @@ def test_catalog_provides_official_bilingual_night_instructions(client: TestClie
         for phase in ("first_night", "night"):
             assert script["night_order"][phase][0]["id"] == "dusk"
             assert script["night_order"][phase][-1]["id"] == "dawn"
+
+
+@pytest.mark.parametrize("kind", ["action", "information"])
+def test_typed_events_validate_participants_against_their_own_snapshot(
+    client: TestClient, kind: str
+) -> None:
+    payload = draft_payload()
+    event = timeline_event(payload, kind=kind, note="选择并告知玩家")
+    event["details"] = {"actor_seat_id": "seat-1", "target_seat_ids": ["seat-2", "seat-3"]}
+    response = client.post("/api/games", json={**payload, "timeline": [event]})
+    assert response.status_code == 201
+    assert response.json()["timeline"][0]["details"] == event["details"]
+    event["details"]["target_seat_ids"] = ["seat-2", "seat-2"]
+    assert client.post("/api/games", json={**payload, "timeline": [event]}).status_code == 422
+    event["details"]["target_seat_ids"] = ["missing"]
+    assert client.post("/api/games", json={**payload, "timeline": [event]}).status_code == 422
+    event["details"] = {"actor_seat_id": "missing", "target_seat_ids": []}
+    assert client.post("/api/games", json={**payload, "timeline": [event]}).status_code == 422
+    event["details"]["actor_seat_id"] = None
+    event["note"] = "   "
+    assert client.post("/api/games", json={**payload, "timeline": [event]}).status_code == 422

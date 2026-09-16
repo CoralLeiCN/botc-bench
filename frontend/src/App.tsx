@@ -18,16 +18,18 @@ import {
   validateDraft,
 } from "./game";
 import { nextNightStep, nightStepSeats } from "./night";
-import { createEntry, recordChange } from "./timeline";
+import { createEntry, createManualEntry, recordChange } from "./timeline";
 import { emptyHistory, rememberChange, stepHistory } from "./history";
 import { recoverySlot, writeRecovery } from "./recovery";
 import type {
   BranchOrigin,
   Composition,
+  EventDetails,
   GameDraft,
   GameRecord,
   GameSummary,
   HarnessStatus,
+  ManualEventKind,
   Script,
   Seat,
   TimelineEntry,
@@ -544,10 +546,10 @@ export default function App() {
     setReplayIndex(index);
   };
 
-  const addEvent = (note: string) => {
+  const addEvent = (kind: ManualEventKind, note: string, details: EventDetails) => {
     if (!game || replaying || branchingRef.current || !note.trim()) return;
     gameRevisionRef.current += 1;
-    const entry = createEntry(game, "说书人记录", "note", note.trim());
+    const entry = createManualEntry(game, kind, note, details);
     setTimeline((current) => [...current, entry]);
     setDirty(true);
     setNotice(null);

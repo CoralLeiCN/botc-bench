@@ -173,13 +173,38 @@ class GameDraft(GameSnapshot):
         return self
 
 
+class EventDetails(StrictModel):
+    actor_seat_id: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    target_seat_ids: List[str] = Field(default_factory=list, max_length=20)
+
+
 class TimelineEntry(StrictModel):
     id: str = Field(min_length=1, max_length=80)
     recorded_at: datetime
-    kind: Literal["initial", "change", "note", "branch", "undo", "redo"] = "change"
+    kind: Literal[
+        "initial", "change", "note", "branch", "undo", "redo", "action", "information"
+    ] = "change"
     summary: str = Field(min_length=1, max_length=500)
     note: str = Field(default="", max_length=2000)
     snapshot: GameSnapshot
+    details: Optional[EventDetails] = None
+
+    @model_validator(mode="after")
+    def validate_details(self) -> "TimelineEntry":
+        if self.kind in {"action", "information"} and not self.note.strip():
+            raise ValueError("actions and information must include a description")
+        if self.details is not None:
+            if self.kind not in {"action", "information"}:
+                raise ValueError("event details require an action or information event")
+            seat_ids = {seat.id for seat in self.snapshot.seats}
+            participants = set(self.details.target_seat_ids)
+            if len(participants) != len(self.details.target_seat_ids):
+                raise ValueError("event targets must be unique")
+            if self.details.actor_seat_id is not None:
+                participants.add(self.details.actor_seat_id)
+            if not participants.issubset(seat_ids):
+                raise ValueError("event participants must exist in its snapshot")
+        return self
 
 
 class BranchOrigin(StrictModel):

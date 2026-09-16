@@ -316,3 +316,145 @@ def test_temporary_empty_marker_label_does_not_block_later_history_saves(
         ).status_code
         == 201
     )
+
+
+def save_test_analysis(client: TestClient, record: dict, monkeypatch):
+    from backend.app.models import GameDraft, ReasonResponse
+
+    async def reason(game, question, selected_seat_id):
+        # Editing while reasoning must not change the captured context or lose the result.
+        assert game.model_dump(mode="json") == record["draft"]
+        client.app.state.repository.update(
+            record["id"],
+            GameDraft.model_validate({**record["draft"], "notes": "edited during analysis"}),
+            expected_version=1,
+        )
+        return ReasonResponse(answer="Original snapshot analysis", duration_ms=25)
+
+    monkeypatch.setattr(client.app.state.harness, "reason", reason)
+    response = client.post(
+        f"/api/games/{record['id']}/analyses",
+        json={"event_id": record["timeline"][0]["id"], "question": "Check this game",
+              "selected_seat_id": record["draft"]["seats"][0]["id"]},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_analysis_keeps_original_snapshot_during_edits(client: TestClient, monkeypatch) -> None:
+    record = client.post("/api/games", json=draft_payload()).json()
+    analysis = save_test_analysis(client, record, monkeypatch)
+    loaded = client.get(f"/api/games/{record['id']}").json()
+    assert loaded["version"] == 2
+    assert loaded["draft"]["notes"] == "edited during analysis"
+    assert analysis["snapshot"] == record["draft"]
+    assert analysis["source_game_version"] == 1
+    assert loaded["analyses"] == [analysis]
+    # Ordinary saves don't replace independently persisted analyses.
+    updated = client.put(f"/api/games/{record['id']}", json={
+        **loaded["draft"], "phase": "day", "expected_version": 2,
+    })
+    assert updated.json()["analyses"] == [analysis]
+
+
+def test_duplicate_and_archive_round_trip_preserve_history_and_analyses(
+    client: TestClient, monkeypatch,
+) -> None:
+    record = client.post("/api/games", json=draft_payload()).json()
+    analysis = save_test_analysis(client, record, monkeypatch)
+    url = f"/api/games/{record['id']}"
+    source = client.get(url).json()
+    copied = client.post(url + "/duplicate", json={"expected_version": 2})
+    assert copied.status_code == 201
+    copy = copied.json()
+    assert copy["id"] != source["id"]
+    assert copy["version"] == 1
+    assert copy["draft"]["name"].endswith(" · 副本")
+    assert copy["timeline"][:-1] == source["timeline"]
+    assert copy["analyses"] == [analysis]
+    assert client.get(url).json() == source
+    assert client.post(url + "/duplicate", json={"expected_version": 1}).status_code == 409
+
+    archive = client.get(url + "/export").json()
+    assert archive["format"] == "botc-bench-game"
+    imported = client.post("/api/games/import", json=archive)
+    assert imported.status_code == 201, imported.text
+    restored = imported.json()
+    assert restored["id"] not in {source["id"], copy["id"]}
+    assert restored["version"] == 1
+    for key in ("draft", "timeline", "analyses", "branch_origin"):
+        assert restored[key] == source[key]
+    assert client.get(url).json() == source
+    # Importing the same backup twice creates independent games without ID collisions.
+    again = client.post("/api/games/import", json=archive).json()
+    assert again["id"] != restored["id"]
+
+
+@pytest.mark.parametrize("corruption", ["format", "version", "mismatch", "role", "analysis"])
+def test_invalid_import_is_atomic(client: TestClient, monkeypatch, corruption: str) -> None:
+    record = client.post("/api/games", json=draft_payload()).json()
+    save_test_analysis(client, record, monkeypatch)
+    archive = client.get(f"/api/games/{record['id']}/export").json()
+    if corruption == "format":
+        archive["format"] = "some-other-format"
+    elif corruption == "version":
+        archive["schema_version"] = 2
+    elif corruption == "mismatch":
+        archive["game"]["draft"]["notes"] = "not the final event"
+    elif corruption == "role":
+        archive["game"]["timeline"][0]["snapshot"]["script_id"] = "script-999"
+    else:
+        archive["game"]["analyses"][0]["snapshot"]["notes"] = "wrong context"
+    before = client.get("/api/games").json()
+    assert client.post("/api/games/import", json=archive).status_code == 422
+    assert client.get("/api/games").json() == before
+
+
+def test_analysis_rejects_missing_context_and_harness_failure(client: TestClient) -> None:
+    record = client.post("/api/games", json=draft_payload()).json()
+    url = f"/api/games/{record['id']}/analyses"
+    body = {"event_id": record["timeline"][0]["id"], "question": "Check"}
+    assert client.post(url, json={**body, "event_id": "missing"}).status_code == 404
+    assert client.post(url, json={**body, "selected_seat_id": "missing"}).status_code == 422
+    assert client.post(url, json=body).status_code == 503
+    assert client.get(f"/api/games/{record['id']}").json()["analyses"] == []
+
+
+def test_recovery_accepts_incomplete_edits_but_validates_structure(client: TestClient) -> None:
+    payload = draft_payload()
+    payload["name"] = ""
+    payload["composition"]["townsfolk"] = 0
+    recovery = {
+        "schema_version": 1, "saved_at": "2026-09-16T12:00:00Z", "record": None,
+        "timeline": [timeline_event(payload)], "history": {"past": [payload], "future": []},
+        "branch_origin": None, "dirty": True,
+    }
+    assert client.post("/api/drafts/validate", json=recovery).status_code == 200
+    assert client.get("/api/games").json() == []
+    recovery["timeline"][0]["snapshot"]["seats"][0]["role_id"] = "unknown"
+    assert client.post("/api/drafts/validate", json=recovery).status_code == 422
+
+
+def test_branch_carries_only_analyses_from_retained_events(client: TestClient, monkeypatch) -> None:
+    from backend.app.models import ReasonResponse
+
+    async def reason(*args):
+        return ReasonResponse(answer="Analysis", duration_ms=1)
+
+    monkeypatch.setattr(client.app.state.harness, "reason", reason)
+    record = client.post("/api/games", json=draft_payload()).json()
+    url = f"/api/games/{record['id']}"
+    early = client.post(url + "/analyses", json={
+        "event_id": record["timeline"][0]["id"], "question": "Early",
+    }).json()
+    updated = client.put(
+        url, json={**record["draft"], "phase": "day", "expected_version": 1}
+    ).json()
+    client.post(url + "/analyses", json={
+        "event_id": updated["timeline"][-1]["id"], "question": "Late",
+    })
+    branch = client.post(url + "/branch", json={
+        "event_id": record["timeline"][0]["id"], "expected_version": 2,
+    }).json()
+    assert branch["analyses"] == [early]
+    assert len(client.get(url).json()["analyses"]) == 2

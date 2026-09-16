@@ -5,7 +5,13 @@ import {
   Save,
   ShieldCheck,
   Users,
+  Copy,
+  Download,
+  Upload,
+  Undo2,
+  Redo2,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import { allRoles, assignedCounts, TEAM_SHORT } from "../game";
 import type { GameDraft, GameSummary, Script, Team } from "../types";
 
@@ -26,6 +32,13 @@ interface ToolbarProps {
   onLoadGame: (id: string) => void;
   onNewGame: () => void;
   onSave: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onDuplicate: () => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
 }
 
 const teams: Team[] = ["townsfolk", "outsider", "minion", "demon"];
@@ -47,7 +60,10 @@ export function Toolbar({
   onLoadGame,
   onNewGame,
   onSave,
+  canUndo, canRedo, onUndo, onRedo, onDuplicate, onExport, onImport,
 }: ToolbarProps) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const counts = assignedCounts(game.seats, allRoles(script));
   const needsSave = dirty || !currentGameId;
 
@@ -133,6 +149,33 @@ export function Toolbar({
       </div>
 
       <div className="topbar-actions">
+        <div className="edit-actions">
+          <button type="button" className="icon-button" onClick={onUndo}
+            disabled={readOnly || loadingGame || !canUndo} title="撤销局面修改 (Cmd/Ctrl+Z)" aria-label="撤销局面修改"><Undo2 size={15} /></button>
+          <button type="button" className="icon-button" onClick={onRedo}
+            disabled={readOnly || loadingGame || !canRedo} title="重做局面修改 (Cmd/Ctrl+Shift+Z)" aria-label="重做局面修改"><Redo2 size={15} /></button>
+          <div className="file-menu">
+            <button type="button" className="file-menu-trigger" aria-expanded={menuOpen}
+              disabled={saving || loadingGame} onClick={() => setMenuOpen(!menuOpen)}>存档操作 ▾</button>
+            {menuOpen && <>
+              <button className="file-menu-dismiss" aria-label="关闭存档操作" onClick={() => setMenuOpen(false)} />
+              <div className="file-menu-items" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}>
+                <button type="button" disabled={!currentGameId || saving || loadingGame}
+                  onClick={() => { setMenuOpen(false); onDuplicate(); }}><Copy size={14} />复制当前存档</button>
+                <button type="button" disabled={saving || loadingGame}
+                  onClick={() => { setMenuOpen(false); onExport(); }}><Download size={14} />导出 JSON</button>
+                <button type="button" disabled={saving || loadingGame}
+                  onClick={() => { setMenuOpen(false); fileInput.current?.click(); }}><Upload size={14} />导入 JSON</button>
+              </div>
+            </>}
+          </div>
+          <input ref={fileInput} type="file" accept=".json,application/json" hidden
+            aria-label="导入 JSON 文件" onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onImport(file);
+            }} />
+        </div>
         <label className="archive-select" title="载入本地存档">
           <Archive size={15} />
           <select

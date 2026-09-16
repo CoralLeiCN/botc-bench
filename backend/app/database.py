@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
-from .models import BranchOrigin, GameDraft, GameRecord, GameSummary, TimelineEntry
+from .models import BranchOrigin, GameDraft, GameRecord, GameSummary, SavedAnalysis, TimelineEntry
 
 
 class GameNotFound(KeyError):
@@ -72,7 +72,17 @@ class GameRepository:
                 )
             if "branch_origin" not in columns:
                 connection.execute("ALTER TABLE games ADD COLUMN branch_origin TEXT")
-            connection.execute("UPDATE schema_meta SET version = 2")
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS analyses (
+                    game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+                    id TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    PRIMARY KEY (game_id, id)
+                )
+                """
+            )
+            connection.execute("UPDATE schema_meta SET version = 3")
 
     def list(self) -> List[GameSummary]:
         with self._connect() as connection:
@@ -86,10 +96,60 @@ class GameRepository:
 
     def get(self, game_id: str) -> GameRecord:
         with self._connect() as connection:
+            connection.execute("BEGIN")
             row = connection.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
-        if row is None:
-            raise GameNotFound(game_id)
-        return self._record(row)
+            if row is None:
+                raise GameNotFound(game_id)
+            record = self._record(row)
+            record.analyses = self._analyses(connection, game_id)
+        return record
+
+    @staticmethod
+    def _analyses(connection: sqlite3.Connection, game_id: str) -> List[SavedAnalysis]:
+        rows = connection.execute(
+            "SELECT payload FROM analyses WHERE game_id = ? ORDER BY rowid", (game_id,)
+        ).fetchall()
+        return [SavedAnalysis.model_validate_json(row["payload"]) for row in rows]
+
+    @staticmethod
+    def _insert_analysis(
+        connection: sqlite3.Connection, game_id: str, analysis: SavedAnalysis
+    ) -> None:
+        connection.execute(
+            "INSERT INTO analyses(game_id, id, payload) VALUES (?, ?, ?)",
+            (game_id, analysis.id, analysis.model_dump_json()),
+        )
+
+    def save_analysis(self, game_id: str, analysis: SavedAnalysis) -> SavedAnalysis:
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if not connection.execute("SELECT 1 FROM games WHERE id = ?", (game_id,)).fetchone():
+                raise GameNotFound(game_id)
+            self._insert_analysis(connection, game_id, analysis)
+        return analysis
+
+    def import_game(self, source: GameRecord) -> GameRecord:
+        with self._connect() as connection:
+            game_id = self._insert(connection, source.draft, source.timeline, source.branch_origin)
+            for analysis in source.analyses:
+                self._insert_analysis(connection, game_id, analysis)
+        return self.get(game_id)
+
+    def duplicate(self, game_id: str, expected_version: int) -> GameRecord:
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
+            if row is None:
+                raise GameNotFound(game_id)
+            source = self._record(row)
+            if source.version != expected_version:
+                raise VersionConflict(f"expected {expected_version}, current {source.version}")
+            draft = source.draft.model_copy(update={"name": f"{source.draft.name[:110]} · 副本"})
+            timeline = [*source.timeline, self._entry(draft, "复制存档", "change")]
+            copy_id = self._insert(connection, draft, timeline, source.branch_origin)
+            for analysis in self._analyses(connection, game_id):
+                self._insert_analysis(connection, copy_id, analysis)
+        return self.get(copy_id)
 
     def create(
         self, draft: GameDraft, timeline: Optional[List[TimelineEntry]] = None
@@ -197,6 +257,10 @@ class GameRepository:
             ]
             origin = BranchOrigin(game_id=game_id, game_name=source.draft.name, event_id=event_id)
             branch_id = self._insert(connection, draft, timeline, origin)
+            event_ids = {event.id for event in timeline}
+            for analysis in self._analyses(connection, game_id):
+                if analysis.event_id in event_ids:
+                    self._insert_analysis(connection, branch_id, analysis)
         return self.get(branch_id)
 
     def delete(self, game_id: str) -> None:

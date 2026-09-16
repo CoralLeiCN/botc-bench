@@ -7,7 +7,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
-import type { HarnessStatus, Script, Seat } from "../types";
+import { phaseLabel } from "../timeline";
+import type { HarnessStatus, SavedAnalysis, Script, Seat } from "../types";
 
 interface CodexPanelProps {
   script: Script;
@@ -15,6 +16,10 @@ interface CodexPanelProps {
   status: HarnessStatus | null;
   answer: string;
   busy: boolean;
+  disabled: boolean;
+  analyses: SavedAnalysis[];
+  currentEventId: string | null;
+  onViewSnapshot: (analysis: SavedAnalysis) => void;
   error: string | null;
   onAsk: (question: string) => Promise<void>;
 }
@@ -30,6 +35,10 @@ export function CodexPanel({
   status,
   answer,
   busy,
+  disabled,
+  analyses,
+  currentEventId,
+  onViewSnapshot,
   error,
   onAsk,
 }: CodexPanelProps) {
@@ -37,7 +46,7 @@ export function CodexPanel({
 
   const submit = async () => {
     const value = question.trim();
-    if (!value || busy || !status?.available) return;
+    if (!value || busy || disabled || !status?.available) return;
     await onAsk(value);
   };
 
@@ -68,7 +77,7 @@ export function CodexPanel({
           <button
             type="button"
             key={label}
-            disabled={busy || !status?.available}
+            disabled={busy || disabled || !status?.available}
             onClick={() => {
               setQuestion(prompt);
               void onAsk(prompt);
@@ -93,7 +102,7 @@ export function CodexPanel({
         <button
           type="button"
           onClick={() => void submit()}
-          disabled={!question.trim() || busy || !status?.available}
+          disabled={!question.trim() || busy || disabled || !status?.available}
         >
           {busy ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
           {busy ? "推理中" : "触发本地 Codex"}
@@ -126,6 +135,26 @@ export function CodexPanel({
           )}
         </article>
       )}
+
+      <div className="saved-analyses">
+        <h3>已保存分析 <span>{analyses.length}</span></h3>
+        {!analyses.length && <p>分析完成后自动附在原始局面快照上。</p>}
+        {[...analyses].reverse().map((analysis) => {
+          const seat = analysis.snapshot.seats.find((item) => item.id === analysis.selected_seat_id);
+          return <details key={analysis.id} className="saved-analysis">
+            <summary>{analysis.question}</summary>
+            <div className="analysis-meta">
+              <time dateTime={analysis.created_at}>{new Date(analysis.created_at).toLocaleString("zh-CN")}</time>
+              <span>{analysis.snapshot.name} · {phaseLabel(analysis.snapshot)}</span>
+              <span>{seat ? `${seat.position} 号 ${seat.player_name}` : "未选玩家"} · {(analysis.duration_ms / 1000).toFixed(1)} 秒</span>
+              {analysis.model && <span>{analysis.model}</span>}
+              <span>{currentEventId === analysis.event_id ? "当前显示的快照" : "来自历史快照"} · AI 分析，非官方裁定</span>
+            </div>
+            <button type="button" disabled={disabled} onClick={() => onViewSnapshot(analysis)}>查看原始局面</button>
+            <pre>{analysis.answer}</pre>
+          </details>;
+        })}
+      </div>
 
       <div className="source-links">
         <a href={`/api/scripts/${script.id}/qa`} target="_blank" rel="noreferrer">

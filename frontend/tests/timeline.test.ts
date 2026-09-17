@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  createEntry, createManualEntry, eventCategories, eventParticipants, phaseLabel, recordChange, timelineChapters,
+  createEntry, createManualEntry, eventAudienceLabel, eventCategories, eventParticipants, phaseLabel, recordChange, timelineChapters,
 } from "../src/timeline.ts";
 import type { GameDraft, TimelineEntry } from "../src/types.ts";
 
@@ -157,4 +157,25 @@ test("manual events retain exact information and historical participants indepen
   const note = createManualEntry(snapshot, "note", "General note", details);
   assert.equal(note.details, undefined);
   assert.equal(eventParticipants(note), "");
+});
+
+test("event sharing is explicit, independent of participants, and retains historical recipients", () => {
+  const snapshot = game();
+  const details = { actor_seat_id: "seat-0", target_seat_ids: ["seat-1"] };
+  const privateByDefault = createManualEntry(snapshot, "information", "Pending information", details);
+  assert.equal(eventAudienceLabel(privateByDefault), "仅说书人");
+  assert.deepEqual(privateByDefault.audience?.recipient_seat_ids, []);
+  const audience = { visibility: "private" as const, recipient_seat_ids: ["seat-2", "seat-3"] };
+  const shared = createManualEntry(snapshot, "information", "Delivered information", details, audience);
+  audience.recipient_seat_ids.pop();
+  snapshot.seats[2].player_name = "Renamed later";
+  assert.deepEqual(shared.audience?.recipient_seat_ids, ["seat-2", "seat-3"]);
+  assert.equal(eventAudienceLabel(shared), "仅指定玩家可见：3 号 Player 2、4 号 Player 3");
+  assert.equal(eventAudienceLabel(shared, "en"), "Visible only to: Seat 3 · Player 2, Seat 4 · Player 3");
+  assert.equal(shared.note, "Delivered information");
+  assert.equal(eventAudienceLabel(createEntry(snapshot, "Legacy record")), "仅说书人");
+  const announcement = createManualEntry(snapshot, "note", "Public announcement", details,
+    { visibility: "public", recipient_seat_ids: [] });
+  assert.equal(eventAudienceLabel(announcement), "所有玩家可见");
+  assert.equal(eventAudienceLabel(announcement, "en"), "Visible to all players");
 });

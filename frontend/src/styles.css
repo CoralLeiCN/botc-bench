@@ -2254,6 +2254,20 @@ select {
 .player-view h2 { margin: 0 0 12px; color: var(--accent); font-size: 13px; }
 .player-information p { font-size: 13px; line-height: 1.7; }
 .player-information .ability-card { margin-top: 16px; }
+.public-ballot { margin: 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+.public-ballot summary { cursor: pointer; line-height: 1.7; }
+.public-ballot summary span { display: block; color: var(--muted); }
+.public-votes { list-style: none; padding: 0; margin: 8px 0 0; }
+.public-votes li { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line); }
+.public-votes small { color: var(--muted); }
+.personal-history { margin-top: 16px; }
+.personal-history h2 span { color: var(--muted); font-size: 12px; }
+.personal-history ol { list-style: none; margin: 12px 0 0; padding: 0; }
+.personal-history ol > li { padding: 14px 0; border-top: 1px solid var(--line); }
+.personal-history header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
+.personal-history header span, .personal-history time, .history-event-id { color: var(--muted); font-size: 10px; }
+.history-event-id { overflow-wrap: anywhere; }
+.timeline-note-options > label { display: grid; gap: 4px; }
 .player-mode .ability-card p[lang="en"] { display: block; }
 .recorded-information { white-space: pre-wrap; overflow-wrap: anywhere; }
 .public-seat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }

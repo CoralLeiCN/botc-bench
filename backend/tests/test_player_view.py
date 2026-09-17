@@ -52,6 +52,7 @@ def test_drunk_receives_shown_empath_and_no_storyteller_fields() -> None:
     view = build_player_view(game, "seat-1").model_dump()
     assert set(view) == {
         "script_id", "player_count", "phase", "day_number", "seats", "public_information", "you",
+        "nominations", "history",
     }
     assert view["you"] == {
         "seat_id": "seat-1", "shown_role_id": "empath", "shown_alignment": "good",

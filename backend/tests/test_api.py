@@ -689,6 +689,7 @@ def test_saved_player_analysis_preserves_preview_and_perspective(client, monkeyp
     record = client.post("/api/games", json=payload).json()
     request = {
         "game": record["draft"], "question": "What do I know?",
+        "timeline": record["timeline"],
         "selected_seat_id": "seat-1", "perspective": "player",
     }
     preview = client.post("/api/reason/preview", json=request).json()

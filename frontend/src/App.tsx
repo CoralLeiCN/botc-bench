@@ -30,6 +30,7 @@ import type {
   BranchOrigin,
   Composition,
   EventDetails,
+  EventAudience,
   GameDraft,
   GameRecord,
   GameSummary,
@@ -186,7 +187,7 @@ export default function App() {
     question: question.trim(),
     selected_seat_id: viewAsSeatId ?? selectedSeatId,
     perspective: viewAsSeatId ? "player" : "storyteller",
-    timeline: viewAsSeatId ? undefined : timeline.slice(
+    timeline: timeline.slice(
       0, replayIndex === null ? timeline.length : replayIndex + 1,
     ),
   } : null, [displayedGame, question, selectedSeatId, viewAsSeatId, timeline, replayIndex]);
@@ -195,6 +196,7 @@ export default function App() {
   const previewError = previewFailure?.request === reasonRequest ? previewFailure.message : null;
   // Keep the same safe projection visible while only the question is being edited.
   const playerView = previewRecord?.request.game === displayedGame &&
+    previewRecord.request.timeline?.at(-1)?.id === reasonRequest?.timeline?.at(-1)?.id &&
     previewRecord.request.perspective === "player" &&
     previewRecord.request.selected_seat_id === viewAsSeatId
     ? previewRecord.result.player_view : null;
@@ -618,11 +620,11 @@ export default function App() {
     setReplayIndex(index);
   };
 
-  const addEvent = (kind: ManualEventKind, note: string, details: EventDetails) => {
+  const addEvent = (kind: ManualEventKind, note: string, details: EventDetails, audience: EventAudience) => {
     if (!game || replaying || branchingRef.current || !note.trim()) return;
     gameRevisionRef.current += 1;
     invalidateCodexContext();
-    const entry = createManualEntry(game, kind, note, details);
+    const entry = createManualEntry(game, kind, note, details, audience);
     setTimeline((current) => [...current, entry]);
     setDirty(true);
     setNotice(null);

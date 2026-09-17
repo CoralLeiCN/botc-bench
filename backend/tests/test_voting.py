@@ -186,9 +186,9 @@ def test_storyteller_preview_binds_timeline_and_rejects_changed_evidence_before_
     assert response.status_code == 409, response.text
 
 
-def test_player_preview_ignores_storyteller_timeline_and_ballots(client):
+def test_player_preview_includes_public_ballots_without_storyteller_notes(client):
     payload = voting_payload()
-    event = timeline_event(payload, "SECRET_EVENT_ID")
+    event = timeline_event(payload, "PUBLIC_BALLOT_EVENT_ID")
     event["note"] = "SECRET_STORYTELLER_NOTE"
     request = {
         "game": payload, "question": "Who voted?",
@@ -197,15 +197,20 @@ def test_player_preview_ignores_storyteller_timeline_and_ballots(client):
     baseline = client.post("/api/reason/preview", json=request)
     response = client.post("/api/reason/preview", json={**request, "timeline": [event]})
     assert response.status_code == baseline.status_code == 200
-    assert response.json() == baseline.json()
+    view = response.json()["player_view"]
+    assert view["nominations"] == baseline.json()["player_view"]["nominations"]
+    assert view["nominations"][0]["id"] == "nomination-1"
+    assert view["history"][0]["event_id"] == "PUBLIC_BALLOT_EVENT_ID"
     prompt = response.json()["prompt"]
     assert "SECRET" not in prompt
     assert "<timeline-evidence-json>" not in prompt
-    assert "nomination-1" not in prompt
+    assert "nomination-1" in prompt
     assert "dead_vote_available" not in prompt
     payload["nominations"] = []
+    without_ballots = client.post("/api/reason/preview", json=request).json()
     payload["seats"][-1]["dead_vote_available"] = False
-    assert client.post("/api/reason/preview", json=request).json() == baseline.json()
+    assert client.post("/api/reason/preview", json=request).json() == without_ballots
+    assert without_ballots["player_view"]["nominations"] == []
 
 
 def test_saved_analysis_binds_preview_to_historical_ballot_evidence(client, monkeypatch):

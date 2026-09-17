@@ -132,6 +132,8 @@ export interface PlayerView {
   day_number: number;
   seats: Array<Pick<Seat, "id" | "position" | "player_name" | "alive" | "public_claim">>;
   public_information: string;
+  nominations: Nomination[];
+  history: PlayerHistoryEntry[];
   you: {
     seat_id: string;
     shown_role_id: string | null;
@@ -152,6 +154,7 @@ export interface ReasonPreview {
   prompt: string;
   prompt_sha256: string;
   player_view: PlayerView | null;
+  template_id: string | null;
 }
 
 export interface PlayerRef {
@@ -189,6 +192,25 @@ export interface EventDetails {
   target_seat_ids: string[];
 }
 
+export interface EventAudience {
+  visibility: "storyteller" | "public" | "private";
+  recipient_seat_ids: string[];
+}
+
+export interface PlayerHistoryEntry {
+  id: string;
+  event_id: string;
+  recorded_at: string;
+  phase: GamePhase;
+  day_number: number;
+  kind: ManualEventKind | "observation" | "nomination";
+  visibility: "public" | "private";
+  text: string;
+  actor: PlayerRef | null;
+  targets: PlayerRef[];
+  nomination: Nomination | null;
+}
+
 export type ManualEventKind = "note" | "action" | "information";
 
 export interface TimelineEntry {
@@ -199,6 +221,7 @@ export interface TimelineEntry {
   note: string;
   snapshot: GameDraft;
   details?: EventDetails | null;
+  audience?: EventAudience;
 }
 
 export interface BranchOrigin {

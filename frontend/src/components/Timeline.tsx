@@ -4,9 +4,9 @@ import {
   List, Pause, Play, Plus, Radio, X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EVENT_LABELS, eventCategories, eventParticipants, phaseLabel, timelineChapters, timelineSummary } from "../timeline";
+import { EVENT_LABELS, eventAudienceLabel, eventCategories, eventParticipants, phaseLabel, timelineChapters, timelineSummary } from "../timeline";
 import type { EventCategory } from "../timeline";
-import type { BranchOrigin, EventDetails, ManualEventKind, TimelineEntry, Script } from "../types";
+import type { BranchOrigin, EventAudience, EventDetails, ManualEventKind, TimelineEntry, Script } from "../types";
 
 interface TimelineProps {
   entries: TimelineEntry[];
@@ -17,7 +17,7 @@ interface TimelineProps {
   dirty: boolean;
   saveFailed: boolean;
   onSeek: (index: number | null) => void;
-  onAddEvent: (kind: ManualEventKind, note: string, details: EventDetails) => void;
+  onAddEvent: (kind: ManualEventKind, note: string, details: EventDetails, audience: EventAudience) => void;
   onBranch: () => void;
 }
 
@@ -32,6 +32,8 @@ export function Timeline({
   const [eventKind, setEventKind] = useState<ManualEventKind>("note");
   const [actorId, setActorId] = useState("");
   const [targetIds, setTargetIds] = useState<string[]>([]);
+  const [visibility, setVisibility] = useState<EventAudience["visibility"]>("storyteller");
+  const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<EventCategory | "all">("all");
   const participantPicker = useRef<HTMLDetailsElement | null>(null);
   const activeRow = useRef<HTMLButtonElement | null>(null);
@@ -40,6 +42,7 @@ export function Timeline({
   const index = replayIndex ?? entries.length - 1;
   const entry = entries[index];
   const summary = (itemIndex: number) => timelineSummary(entries[itemIndex], entries[itemIndex - 1], scripts, language);
+  const recipients = recipientIds.filter((id) => entry?.snapshot.seats.some((seat) => seat.id === id));
   const replaying = replayIndex !== null;
   const atEnd = index >= entries.length - 1;
   const playActive = playing && replaying && !atEnd && !busy;
@@ -64,13 +67,17 @@ export function Timeline({
     onSeek(next);
   };
   const submitNote = () => {
-    if (!note.trim() || busy) return;
+    if (!note.trim() || busy || (visibility === "private" && !recipients.length)) return;
     const seatIds = new Set(entry.snapshot.seats.map((seat) => seat.id));
     onAddEvent(eventKind, note, {
       actor_seat_id: seatIds.has(actorId) ? actorId : null,
       target_seat_ids: targetIds.filter((id) => seatIds.has(id)),
-    });
+    }, { visibility, recipient_seat_ids: visibility === "private" ? recipients : [] });
     setNote("");
+    setVisibility("storyteller");
+    setRecipientIds([]);
+    setActorId("");
+    setTargetIds([]);
     if (participantPicker.current) participantPicker.current.open = false;
   };
   if (!entry) return null;
@@ -155,6 +162,7 @@ export function Timeline({
           <p>{summary(index)}</p>
           {entry.details && <p className="timeline-event-participants">{eventParticipants(entry, language)}</p>}
           {entry.note && <p className="timeline-event-note">{entry.note}</p>}
+          {["note", "action", "information"].includes(entry.kind) && <small>{eventAudienceLabel(entry, language)}</small>}
           {branchOrigin && <small className="branch-origin"><GitBranch size={11} /> {t("分支来源：")}{branchOrigin.game_name}</small>}
         </div>
         {!replaying && (
@@ -167,6 +175,28 @@ export function Timeline({
                 <option value="action">{t("行动")}</option>
                 <option value="information">{t("信息")}</option>
               </select>
+              <label>{t("可见范围")}
+                <select aria-label={t("事件可见范围")} value={visibility} disabled={busy}
+                  onChange={(event) => setVisibility(event.target.value as EventAudience["visibility"])}>
+                  <option value="storyteller">{t("仅说书人")}</option>
+                  <option value="public">{t("所有玩家")}</option>
+                  <option value="private">{t("指定玩家")}</option>
+                </select>
+              </label>
+              {visibility === "private" && <details className="event-participant-picker" open>
+                <summary>{t("可见玩家 · 已选 {0} 人", [recipients.length])}</summary>
+                <fieldset disabled={busy}>
+                  <legend>{t("选择能看到本事件的玩家")}</legend>
+                  <div className="event-targets">
+                    {entry.snapshot.seats.map((seat) => <label key={seat.id}>
+                      <input type="checkbox" checked={recipients.includes(seat.id)}
+                        onChange={(event) => setRecipientIds((current) => event.target.checked
+                          ? [...current, seat.id] : current.filter((id) => id !== seat.id))} />
+                      {t("{0} 号 {1}", [seat.position, seat.player_name])}
+                    </label>)}
+                  </div>
+                </fieldset>
+              </details>}
               {eventKind !== "note" && <details ref={participantPicker} className="event-participant-picker">
                 <summary>{t("参与玩家")}</summary>
                 <fieldset disabled={busy}>
@@ -179,7 +209,7 @@ export function Timeline({
                       </option>)}
                     </select>
                   </label>
-                  <span>{eventKind === "information" ? t("信息接收者（可多选）") : t("行动目标（可多选）")}</span>
+                  <span>{t("相关目标（可多选，不决定可见范围）")}</span>
                   <div className="event-targets">
                     {entry.snapshot.seats.map((seat) => <label key={seat.id}>
                       <input type="checkbox" checked={targetIds.includes(seat.id)}
@@ -193,13 +223,15 @@ export function Timeline({
             </div>
             <textarea id="timeline-note" value={note} onChange={(event) => setNote(event.target.value)}
               disabled={busy} maxLength={2000} rows={2}
-              placeholder={eventKind === "information" ? t("记录实际告知玩家的信息…") : eventKind === "action" ? t("记录行动选择与结果…") : t("记录提名投票或说书人公告…")}
+              placeholder={visibility === "storyteller" ? t("记录说书人备注；选择可见范围可向玩家提供事件…") : t("只填写已向所选玩家公开的内容；正文及参与玩家将进入他们的历史…")}
               onKeyDown={(event) => {
                 if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                   event.preventDefault(); submitNote();
                 }
               }} />
-            <button type="submit" disabled={!note.trim() || busy}><Plus size={14} /> {t("记录")}</button>
+            <button type="submit" disabled={!note.trim() || busy || (visibility === "private" && !recipients.length)}>
+              <Plus size={14} /> {visibility === "storyteller" ? t("记录") : t("记录并提供给玩家")}
+            </button>
           </form>
         )}
       </div>
@@ -229,7 +261,8 @@ export function Timeline({
                     <span className="event-phase">{t(EVENT_LABELS[categories[itemIndex].find((value) => value !== "change") ?? item.kind])}</span>
                     <span className="event-description"><b>{summary(itemIndex)}</b>
                       {item.details && <small>{eventParticipants(item, language)}</small>}
-                      {item.note && <small>{item.note}</small>}</span>
+                      {item.note && <small>{item.note}</small>}
+                      {["note", "action", "information"].includes(item.kind) && <small>{eventAudienceLabel(item, language)}</small>}</span>
                     <time dateTime={item.recorded_at}>{new Date(item.recorded_at).toLocaleTimeString(locale)}</time>
                   </button>
                 );

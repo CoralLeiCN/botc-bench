@@ -249,6 +249,21 @@ class EventDetails(StrictModel):
     target_seat_ids: List[str] = Field(default_factory=list, max_length=20)
 
 
+class EventAudience(StrictModel):
+    visibility: Literal["storyteller", "public", "private"] = "storyteller"
+    recipient_seat_ids: List[str] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_recipients(self) -> "EventAudience":
+        if len(self.recipient_seat_ids) != len(set(self.recipient_seat_ids)):
+            raise ValueError("event recipients must be unique")
+        if self.visibility == "private" and not self.recipient_seat_ids:
+            raise ValueError("private events require recipients")
+        if self.visibility != "private" and self.recipient_seat_ids:
+            raise ValueError("only private events can specify recipients")
+        return self
+
+
 class TimelineEntry(StrictModel):
     id: str = Field(min_length=1, max_length=80)
     recorded_at: datetime
@@ -259,9 +274,18 @@ class TimelineEntry(StrictModel):
     note: str = Field(default="", max_length=2000)
     snapshot: GameSnapshot
     details: Optional[EventDetails] = None
+    audience: EventAudience = Field(default_factory=EventAudience)
 
     @model_validator(mode="after")
     def validate_details(self) -> "TimelineEntry":
+        if self.audience.visibility != "storyteller" and (
+            self.kind not in {"note", "action", "information"} or not self.note.strip()
+        ):
+            raise ValueError("only described manual events can be shared")
+        if not set(self.audience.recipient_seat_ids).issubset(
+            seat.id for seat in self.snapshot.seats
+        ):
+            raise ValueError("event recipients must exist in its snapshot")
         if self.kind in {"action", "information"} and not self.note.strip():
             raise ValueError("actions and information must include a description")
         if self.details is not None:
@@ -430,6 +454,20 @@ class PlayerKnowledge(StrictModel):
     private_information: str
 
 
+class PlayerHistoryEntry(StrictModel):
+    id: str
+    event_id: str
+    recorded_at: datetime
+    phase: Literal["setup", "first_night", "day", "night", "finished"]
+    day_number: int
+    kind: Literal["note", "action", "information", "observation", "nomination"]
+    visibility: Literal["public", "private"]
+    text: str
+    actor: Optional[PlayerRef] = None
+    targets: List[PlayerRef] = Field(default_factory=list)
+    nomination: Optional[Nomination] = None
+
+
 class PlayerView(StrictModel):
     script_id: str
     player_count: int
@@ -438,6 +476,8 @@ class PlayerView(StrictModel):
     seats: List[PublicSeat]
     public_information: str
     you: PlayerKnowledge
+    nominations: List[Nomination] = Field(default_factory=list)
+    history: List[PlayerHistoryEntry] = Field(default_factory=list)
 
 
 class ReasonPreviewRequest(StrictModel):
@@ -480,6 +520,7 @@ class ReasonPreview(StrictModel):
     prompt: str
     prompt_sha256: str
     player_view: Optional[PlayerView] = None
+    template_id: Optional[str] = None
 
 
 class ReasonResponse(StrictModel):

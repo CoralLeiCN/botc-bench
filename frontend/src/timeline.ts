@@ -1,5 +1,5 @@
 import { localizedText, translate, type Language } from "./language.ts";
-import type { EventDetails, GameDraft, ManualEventKind, Script, TimelineEntry } from "./types";
+import type { EventAudience, EventDetails, GameDraft, ManualEventKind, Script, TimelineEntry } from "./types";
 import { nightStepTitle } from "./night.ts";
 import { executionStanding, playerLabel, voteTotal } from "./voting.ts";
 
@@ -40,10 +40,24 @@ export function timelineChapters(entries: TimelineEntry[], language: Language = 
   return chapters;
 }
 
-export function createManualEntry(snapshot: GameDraft, kind: ManualEventKind, note: string, details: EventDetails): TimelineEntry {
+export function createManualEntry(
+  snapshot: GameDraft, kind: ManualEventKind, note: string, details: EventDetails,
+  audience: EventAudience = { visibility: "storyteller", recipient_seat_ids: [] },
+): TimelineEntry {
   const entry = createEntry(snapshot, EVENT_LABELS[kind], kind, note.trim());
   if (kind !== "note") entry.details = structuredClone(details);
+  entry.audience = structuredClone(audience);
   return entry;
+}
+
+export function eventAudienceLabel(entry: TimelineEntry, language: Language = "zh_hans"): string {
+  if (!entry.audience || entry.audience.visibility === "storyteller") return translate(language, "仅说书人");
+  if (entry.audience.visibility === "public") return translate(language, "所有玩家可见");
+  const names = entry.audience.recipient_seat_ids.map((id) => {
+    const seat = entry.snapshot.seats.find((item) => item.id === id);
+    return seat ? playerLabel(seat, language) : id;
+  }).join(language === "en" ? ", " : "、");
+  return translate(language, "仅指定玩家可见：{0}", [names]);
 }
 
 export function eventParticipants(entry: TimelineEntry, language: Language = "zh_hans"): string {

@@ -38,3 +38,14 @@ test("knowledge alone counts as seat data when reducing the player count", () =>
   assert.equal(hasSeatData(seat({ public_claim: "I am Chef" })), true);
   assert.equal(hasSeatData(seat({ private_information: "First night: 0" })), true);
 });
+
+test("suggested compositions remain saveable with excess Traveller assignments", async () => {
+  const { suggestedComposition, compositionTotal } = await import("../src/game.ts");
+  for (let players = 5; players <= 20; players += 1) {
+    for (let travellers = 0; travellers <= players; travellers += 1) {
+      const composition = suggestedComposition(players, Array(travellers).fill("beggar"), ["beggar"]);
+      assert.ok(composition.traveller <= 5);
+      assert.equal(compositionTotal(composition), players);
+    }
+  }
+});

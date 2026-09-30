@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Iterator, List, Optional
 from uuid import uuid4
 
 from .models import BranchOrigin, GameDraft, GameRecord, GameSummary, SavedAnalysis, TimelineEntry
@@ -34,12 +35,15 @@ class GameRepository:
     def __init__(self, database_path: Path) -> None:
         self._path = database_path
 
-    def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._path, timeout=5)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA busy_timeout = 5000")
-        return connection
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        # Each operation owns its connection; threads never share a transaction.
+        with closing(sqlite3.connect(self._path, timeout=5)) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA busy_timeout = 5000")
+            with connection:
+                yield connection
 
     def initialize(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

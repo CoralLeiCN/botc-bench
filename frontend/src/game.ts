@@ -50,6 +50,8 @@ const SETUP_OUTSIDER_DELTAS: Record<string, number> = {
   vigormortis: -1,
 };
 
+const MAX_TRAVELLERS = 5;
+
 export function setupModifierRoleIds(roleIds: Array<string | null>): string[] {
   return [...new Set(roleIds.filter((id): id is string => Boolean(id && id in SETUP_OUTSIDER_DELTAS)))];
 }
@@ -62,6 +64,7 @@ export function suggestedComposition(
   const travellerIds = new Set(travellerRoleIds);
   const assignedTravellers = roleIds.filter((roleId) => roleId && travellerIds.has(roleId)).length;
   const travellerCount = Math.min(
+    MAX_TRAVELLERS,
     Math.max(0, playerCount - 5),
     Math.max(0, playerCount - 15, assignedTravellers),
   );

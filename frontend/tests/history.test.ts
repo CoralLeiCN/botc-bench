@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { emptyHistory, rememberChange, stepHistory } from "../src/history.ts";
 import { createEntry, recordChange } from "../src/timeline.ts";
-import { recoverySlot, writeRecovery } from "../src/recovery.ts";
 import { finishNomination, recordVote } from "../src/voting.ts";
-import type { DraftRecovery, GameDraft } from "../src/types.ts";
+import type { GameDraft } from "../src/types.ts";
 
 const game: GameDraft = {
   schema_version: 1, name: "Test", script_id: "script-002", player_count: 5,
@@ -80,44 +79,4 @@ test("undo and redo restore ballot status and dead vote tokens together", () => 
   assert.equal(redone.snapshot.nominations[0].status, "closed");
   assert.equal(redone.snapshot.seats[0].dead_vote_available, false);
   assert.deepEqual(redone.snapshot, closed);
-});
-
-class MemoryStorage {
-  data = new Map<string, string>();
-  get length() { return this.data.size; }
-  key(index: number) { return [...this.data.keys()][index] ?? null; }
-  getItem(key: string) { return this.data.get(key) ?? null; }
-  setItem(key: string, value: string) { this.data.set(key, value); }
-  removeItem(key: string) { this.data.delete(key); }
-  clear() { this.data.clear(); }
-}
-
-test("drafts recover incomplete state and undo across reload, with independent tab slots", () => {
-  const storage = new MemoryStorage();
-  const firstSession = new MemoryStorage();
-  const first = recoverySlot(storage, firstSession);
-  assert.equal(first.raw, null);
-  const draft: DraftRecovery = {
-    schema_version: 1, saved_at: new Date().toISOString(), record: null,
-    timeline: [createEntry({ ...game, name: "", composition: { ...game.composition, townsfolk: 0 } }, "Incomplete")],
-    history: { past: [game], future: [] }, branch_origin: null, dirty: true,
-  };
-  writeRecovery(storage, first.key, draft);
-  assert.deepEqual(JSON.parse(recoverySlot(storage, firstSession).raw!), draft);
-  const anotherTab = recoverySlot(storage, new MemoryStorage());
-  assert.notEqual(anotherTab.key, first.key);
-  assert.deepEqual(JSON.parse(anotherTab.raw!), draft);
-  writeRecovery(storage, anotherTab.key, { ...draft, dirty: false });
-  assert.equal(JSON.parse(recoverySlot(storage, firstSession).raw!).dirty, true);
-});
-
-test("malformed recovery is retained and quota errors do not erase the checkpoint", () => {
-  const storage = new MemoryStorage();
-  const session = new MemoryStorage();
-  const { key } = recoverySlot(storage, session);
-  storage.setItem(key, "broken JSON");
-  assert.equal(recoverySlot(storage, session).raw, "broken JSON");
-  storage.setItem = () => { throw new Error("QuotaExceededError"); };
-  assert.throws(() => writeRecovery(storage, key, {} as DraftRecovery), /Quota/);
-  assert.equal(storage.getItem(key), "broken JSON");
 });

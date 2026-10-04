@@ -2,7 +2,7 @@
 
 > 本部分依据官方 Wiki 与规则书整理。角色能力可能覆盖通用规则，具体对局仍应以所用剧本和角色历书（Almanac）为准。
 >
-> Agent 的测试协议与控制规则见 [benchmark_rules.md](benchmark_rules.md)，不属于官方游戏规则。
+> Agent 的完整对局与局面决策两类测试协议见 [benchmark_rules.md](benchmark_rules.md)，不属于官方游戏规则。
 
 ## 1. 阵营、角色与信息
 

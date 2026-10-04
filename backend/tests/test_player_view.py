@@ -10,6 +10,7 @@ import pytest
 
 from backend.app.models import GameDraft, NightChecklist, NightStep
 from backend.app.services.codex_harness import CodexHarness, PromptChanged
+from backend.app.services.player_prompt import render_player_markdown
 from backend.app.services.player_view import build_player_view
 from backend.tests.test_api import draft_payload
 
@@ -43,10 +44,6 @@ def harness(root=ROOT, binary="/bin/echo") -> CodexHarness:
     return CodexHarness(root_dir=root, binary=binary, enabled=True, timeout_seconds=10)
 
 
-def state_from_prompt(prompt: str) -> dict:
-    return json.loads(prompt.split("<player-view-json>\n")[1].split("\n</player-view-json>")[0])
-
-
 def test_drunk_receives_shown_empath_and_no_storyteller_fields() -> None:
     game = knowledge_game()
     view = build_player_view(game, "seat-1").model_dump()
@@ -72,8 +69,8 @@ def test_drunk_receives_shown_empath_and_no_storyteller_fields() -> None:
 def test_every_agent_receives_only_its_own_private_information(viewer: int) -> None:
     game = knowledge_game()
     prompt = harness().build_prompt(game, "What do I know?", f"seat-{viewer}", "player")
-    state = state_from_prompt(prompt)
-    assert state == build_player_view(game, f"seat-{viewer}").model_dump(mode="json")
+    assert render_player_markdown(build_player_view(game, f"seat-{viewer}")) in prompt
+    assert "<player-view-json>" not in prompt
     for index in range(1, 8):
         assert (f"PRIVATE_{index}" in prompt) == (index == viewer)
         assert f"Claim {index}: I am the Chef." in prompt

@@ -466,7 +466,7 @@ export const englishMessages: Record<string, string> = {
   "记录说书人备注；选择可见范围可向玩家提供事件…": "Record a storyteller note, or choose an audience to share an event…",
   "只填写已向所选玩家公开的内容；正文及参与玩家将进入他们的历史…": "Enter only information already shared with this audience. The text and participants will appear in their history…",
   "记录并提供给玩家": "Record and share with players",
-  "代理输入预览 · 玩家代理模板 v1": "Agent input preview · Player template v1",
+  "代理输入预览 · 玩家代理模板": "Agent input preview · Player template",
   "统一模板自动汇总固定参考资料、你的身份与已知信息、公开投票、个人历史和当前问题。以下全文将原样发送给代理。": "One template combines fixed references, your identity and knowledge, public votes, personal history, and the current question. The text below is sent to the agent unchanged.",
   "模板：": "Template: ",
   "公开提名与投票": "Public nominations and votes",

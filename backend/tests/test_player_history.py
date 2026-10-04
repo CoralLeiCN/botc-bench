@@ -3,9 +3,10 @@ from copy import deepcopy
 import pytest
 
 from backend.app.models import GameDraft, ReasonResponse, TimelineEntry
+from backend.app.services.player_prompt import render_player_markdown
 from backend.app.services.player_view import build_player_view
 from backend.tests.test_api import timeline_event
-from backend.tests.test_player_view import harness, knowledge_game, state_from_prompt
+from backend.tests.test_player_view import harness, knowledge_game
 from backend.tests.test_voting import voting_payload
 
 
@@ -35,8 +36,9 @@ def test_event_audiences_do_not_follow_participants_or_expose_recipient_lists():
         assert "LEGACY_SECRET" not in preview.prompt
         assert "SECRET" not in preview.prompt
         assert "recipient_seat_ids" not in preview.prompt
-        assert preview.template_id == "player-agent-v1"
-        assert state_from_prompt(preview.prompt) == preview.player_view.model_dump(mode="json")
+        assert preview.template_id == "player-agent-v2"
+        assert preview.player_view == build_player_view(game, f"seat-{number}", timeline)
+        assert render_player_markdown(preview.player_view) in preview.prompt
 
 
 def test_history_tracks_known_updates_but_not_hidden_snapshot_changes():

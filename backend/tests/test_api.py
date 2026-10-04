@@ -528,7 +528,8 @@ def test_preview_available_with_disabled_harness_and_incomplete_setup(client: Te
     assert response.status_code == 200
     assert response.json()["player_view"] is not None
     assert len(response.json()["prompt_sha256"]) == 64
-    assert "<player-view-json>" in response.json()["prompt"]
+    assert response.json()["template_id"] == "player-agent-v2"
+    assert "## 当前公开玩家状态" in response.json()["prompt"]
 
 
 def test_reason_rejects_stale_preview_before_harness_launch(client: TestClient) -> None:

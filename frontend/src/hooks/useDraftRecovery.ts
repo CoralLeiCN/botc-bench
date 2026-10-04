@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { uiMessage, type UiMessage } from "../language";
 import { readError } from "../errors";
-import { recoverySlot } from "../recovery";
+import { claimRecoverySlot, type ClaimedRecoverySlot } from "../recovery";
 import { RecoveryStore } from "../recoveryStore";
 import type { DraftRecovery } from "../types";
 import type { GameDocument } from "./useGameDocument";
@@ -11,9 +11,10 @@ export function useDraftRecovery(document: GameDocument) {
   const [isReady, setReady] = useState(false);
   const [isPending, setPending] = useState(false);
   const [error, setError] = useState<UiMessage | null>(null);
-  const slotRef = useRef<ReturnType<typeof recoverySlot> | null>(null);
+  const slotRef = useRef<ClaimedRecoverySlot | null>(null);
+  const loading = useRef<Promise<DraftRecovery | null> | null>(null);
   const waiting = useRef<{ slot: NonNullable<typeof slotRef.current>; draft: DraftRecovery } | null>(null);
-  const writing = useRef(false);
+  const writing = useRef<Promise<void> | null>(null);
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -26,8 +27,15 @@ export function useDraftRecovery(document: GameDocument) {
       // StrictMode immediately remounts effects; only release a genuinely closed view.
       window.setTimeout(() => {
         if (!mounted.current) void (async () => {
-          if (slotRef.current) await store.lease(slotRef.current.key, false);
-          await store.close();
+          await loading.current?.catch(() => undefined);
+          if (mounted.current) return;
+          try {
+            await writing.current;
+            if (slotRef.current) await store.lease(slotRef.current.key, false);
+            await store.close();
+          } finally {
+            await slotRef.current?.release();
+          }
         })().catch(() => undefined);
       }, 0);
     };
@@ -45,8 +53,7 @@ export function useDraftRecovery(document: GameDocument) {
     setPending(true);
     const timer = window.setTimeout(() => {
       if (writing.current) return;
-      writing.current = true;
-      void (async () => {
+      writing.current = (async () => {
         // Keep at most one in-flight checkpoint and one replacement. The newest
         // timeline contains all intermediate edits, including coalesced typing.
         while (waiting.current) {
@@ -63,19 +70,22 @@ export function useDraftRecovery(document: GameDocument) {
             setError(uiMessage("草稿缓存失败：{0}。请保存局面或导出 JSON 备份。", [readError(failure)]));
           }
         }
-      })().finally(() => { writing.current = false; setPending(false); });
+      })().finally(() => { writing.current = null; setPending(false); });
     }, 0);
     return () => window.clearTimeout(timer);
   }, [isReady, store, document.timeline, document.history, document.record, document.branchOrigin, document.dirty]);
 
-  const load = async (): Promise<DraftRecovery | null> => {
-    const slot = slotRef.current ?? recoverySlot(window.localStorage, window.sessionStorage);
-    slotRef.current = slot;
-    const stored = await store.read(slot.key);
-    const legacy: DraftRecovery | null = slot.raw ? JSON.parse(slot.raw) : null;
-    if (legacy && (!stored || Date.parse(legacy.saved_at) > Date.parse(stored.saved_at))) return legacy;
-    slot.legacyKey = null;
-    return stored;
+  const load = (): Promise<DraftRecovery | null> => {
+    loading.current ??= (async () => {
+      const slot = await claimRecoverySlot(window.localStorage, window.sessionStorage, navigator.locks);
+      slotRef.current = slot;
+      const stored = await store.read(slot.sourceKey);
+      const legacy: DraftRecovery | null = slot.raw ? JSON.parse(slot.raw) : null;
+      if (legacy && (!stored || Date.parse(legacy.saved_at) > Date.parse(stored.saved_at))) return legacy;
+      slot.legacyKey = null;
+      return stored;
+    })();
+    return loading.current;
   };
   const fail = (failure: unknown): void => {
     setError(uiMessage("草稿恢复不可用：{0}。原草稿缓存已保留，请先保存到本地存档。", [readError(failure)]));

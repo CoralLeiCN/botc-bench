@@ -2,11 +2,13 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { JSDOM } from "jsdom";
 import { IDBFactory, IDBKeyRange } from "fake-indexeddb";
+import { TestRecoveryLocks } from "../helpers/recoveryLocks";
 
 beforeEach(() => {
   const storageWindow = new JSDOM("", { url: "http://localhost" }).window;
   vi.stubGlobal("localStorage", storageWindow.localStorage);
   vi.stubGlobal("sessionStorage", storageWindow.sessionStorage);
+  vi.stubGlobal("navigator", Object.defineProperty(storageWindow.navigator, "locks", { value: new TestRecoveryLocks() }));
   vi.stubGlobal("indexedDB", new IDBFactory());
   vi.stubGlobal("IDBKeyRange", IDBKeyRange);
   Element.prototype.scrollIntoView = vi.fn();

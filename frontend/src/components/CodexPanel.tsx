@@ -126,7 +126,7 @@ export function CodexPanel({
       </label>
 
       <details className="input-preview" open={playerMode}>
-        <summary>{playerMode ? t("代理输入预览 · 玩家代理模板 v1") : t("代理输入预览 · 完整提示词")}</summary>
+        <summary>{playerMode ? t("代理输入预览 · 玩家代理模板") : t("代理输入预览 · 完整提示词")}</summary>
         <p>{playerMode
           ? t("统一模板自动汇总固定参考资料、你的身份与已知信息、公开投票、个人历史和当前问题。以下全文将原样发送给代理。")
           : t("以下包含固定参考资料、可见局面与问题，将原样作为本次 Codex 调用的输入。")}</p>
